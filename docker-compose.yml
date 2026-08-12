@@ -1,0 +1,38 @@
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile.api
+    container_name: petravia-api
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - PORT=3000
+      - DB_PATH=/data/petravia.db
+      - CORS_ORIGIN=http://localhost
+    volumes:
+      - petravia_data:/data
+    ports:
+      - "3000:3000"
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.web
+    container_name: petravia-web
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    depends_on:
+      api:
+        condition: service_healthy
+
+volumes:
+  petravia_data:
+    name: petravia_data

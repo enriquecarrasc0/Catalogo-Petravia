@@ -1,0 +1,23 @@
+# Dependencias (se instalan en build)
+node_modules
+**/node_modules
+
+# Builds anteriores
+**/dist
+apps/web/dist
+
+# Base de datos local (se usa el volumen)
+**/*.db
+**/*.db-shm
+**/*.db-wal
+
+# Secrets y env locales
+.env
+**/.env
+
+# Dev y misc
+.git
+.gitignore
+*.md
+*.log
+.DS_Store

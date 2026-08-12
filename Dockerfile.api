@@ -1,0 +1,58 @@
+# ── Stage 1: build ────────────────────────────────────────────
+FROM node:20-alpine AS builder
+WORKDIR /app
+
+# Herramientas para compilar better-sqlite3 (nativo)
+RUN apk add --no-cache python3 make g++
+
+# Copiar manifiestos del monorepo primero (mejor cache)
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/api/package.json ./apps/api/
+
+# Instalar TODAS las dependencias (incluyendo devDeps para compilar TS)
+RUN npm ci
+
+# Compilar better-sqlite3 aquí, donde python3/make/g++ están disponibles
+RUN npm rebuild better-sqlite3
+
+# Copiar código fuente
+COPY packages/shared/ ./packages/shared/
+COPY apps/api/ ./apps/api/
+
+# Quitar ignoreDeprecations de ambos tsconfigs
+RUN sed -i '/"ignoreDeprecations"/d' apps/api/tsconfig.json
+RUN sed -i '/"ignoreDeprecations"/d' packages/shared/tsconfig.json 2>/dev/null || true
+
+# Compilar TypeScript
+RUN npx tsc -p packages/shared/tsconfig.json 2>/dev/null || true
+RUN npx tsc -p apps/api/tsconfig.json
+
+# ── Stage 2: producción ────────────────────────────────────────
+FROM node:20-alpine AS runner
+WORKDIR /app
+
+RUN apk add --no-cache wget
+
+# Copiar manifiestos e instalar solo deps de producción (sin compilar nativos)
+COPY package.json package-lock.json ./
+COPY packages/shared/package.json ./packages/shared/
+COPY apps/api/package.json ./apps/api/
+RUN npm ci --omit=dev --ignore-scripts
+
+# Copiar el binario nativo ya compilado desde el builder
+COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
+
+# Copiar build compilado
+COPY --from=builder /app/apps/api/dist ./apps/api/dist
+COPY --from=builder /app/packages/shared/dist ./packages/shared/dist
+
+RUN mkdir -p /data
+
+ENV NODE_ENV=production
+ENV PORT=3000
+ENV DB_PATH=/data/petravia.db
+
+EXPOSE 3000
+
+CMD ["node", "apps/api/dist/apps/api/src/index.js"]

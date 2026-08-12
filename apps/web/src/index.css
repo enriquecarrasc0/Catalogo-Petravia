@@ -1,0 +1,157 @@
+/* ── Tipografía corporativa Petravia: Hind (autoalojada) ── */
+@font-face {
+  font-family: 'Hind';
+  src: url('/fonts/hind-light.otf') format('opentype');
+  font-weight: 300;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Hind';
+  src: url('/fonts/hind-regular.otf') format('opentype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Hind';
+  src: url('/fonts/hind-medium.otf') format('opentype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Hind';
+  src: url('/fonts/hind-semibold.otf') format('opentype');
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Hind';
+  src: url('/fonts/hind-bold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Reserva siempre el espacio del scrollbar vertical para que el ancho
+   disponible no cambie entre páginas con/sin scroll (login vs catálogo).
+   Sin esto, el navbar centrado (max-w-7xl mx-auto) se recorre unos px
+   cuando aparece/desaparece la barra, dando la sensación de que el logo
+   y el botón "Salir" "se mueven" al entrar como cliente. */
+html {
+  overflow-y: scroll;
+  scrollbar-gutter: stable;
+}
+
+:root {
+  /* Identidad corporativa Petravia */
+  --stone:       #f7f4ef;   /* fondo cálido, tono beige claro */
+  --sand:        #ede4d6;   /* superficie secundaria beige */
+  --gold:        #4e5b73;   /* acento primario · Azul Petravia (Pantone 2376-C) */
+  --gold-dark:   #37414f;   /* acento primario oscuro (hover / texto énfasis) */
+  --beige:       #cab6a1;   /* acento secundario · Beige Petravia (tono suavizado) */
+  --beige-dark:  #a48f77;
+  --ink:         #211f1c;   /* texto principal */
+  --muted:       #766e63;   /* texto secundario */
+  --border:      #ddd4c6;
+  --white:       #ffffff;
+  --available:   #3d7a5f;
+  --apartado:    #9a6d2e;
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--stone);
+  color: var(--ink);
+  font-family: 'Hind', sans-serif;
+  font-weight: 400;
+  font-size: 14px;
+  line-height: 1.65;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: 0.01em;
+}
+
+/* ── Fondo de marca: capas suaves en azul/beige Petravia + textura sutil ── */
+.app-background {
+  position: relative;
+  background-color: var(--stone);
+  background-image:
+    radial-gradient(ellipse 900px 500px at 8% -10%, rgba(78, 91, 115, 0.10), transparent 60%),
+    radial-gradient(ellipse 700px 500px at 100% 0%, rgba(202, 182, 161, 0.35), transparent 55%),
+    radial-gradient(ellipse 900px 600px at 50% 110%, rgba(78, 91, 115, 0.07), transparent 60%);
+  background-attachment: fixed;
+}
+.app-background::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: -1;
+  opacity: 0.5;
+  background-image: repeating-linear-gradient(
+    115deg,
+    rgba(78, 91, 115, 0.025) 0px,
+    rgba(78, 91, 115, 0.025) 1px,
+    transparent 1px,
+    transparent 68px
+  );
+}
+
+.font-display {
+  font-family: 'Hind', sans-serif;
+  font-weight: 600;
+}
+
+/* ── Scrollbar ── */
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: var(--sand); }
+::-webkit-scrollbar-thumb { background: var(--gold); border-radius: 3px; }
+
+/* ── Filtros custom checkbox/radio ── */
+input[type="checkbox"], input[type="radio"] {
+  appearance: none;
+  -webkit-appearance: none;
+  width: 14px;
+  height: 14px;
+  border: 1px solid var(--border);
+  background: var(--white);
+  cursor: pointer;
+  position: relative;
+  flex-shrink: 0;
+  transition: border-color 150ms, background 150ms;
+}
+input[type="radio"] { border-radius: 50%; }
+input[type="checkbox"] { border-radius: 2px; }
+
+input[type="checkbox"]:checked,
+input[type="radio"]:checked {
+  background: var(--gold);
+  border-color: var(--gold);
+}
+input[type="checkbox"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 3px; top: 1px;
+  width: 5px; height: 8px;
+  border: 1.5px solid white;
+  border-left: none; border-top: none;
+  transform: rotate(45deg);
+}
+input[type="radio"]:checked::after {
+  content: '';
+  position: absolute;
+  left: 50%; top: 50%;
+  width: 5px; height: 5px;
+  background: white;
+  border-radius: 50%;
+  transform: translate(-50%, -50%);
+}

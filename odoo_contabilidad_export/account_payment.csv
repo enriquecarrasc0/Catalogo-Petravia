@@ -1,0 +1,63 @@
+﻿id,name,date,partner_id,amount,payment_type,partner_type,journal_id,state
+63,PBNK1/2026/00035,2026-07-02,False,1000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+59,False,2026-07-01,False,0.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+65,PBNK1/2026/00037,2026-07-01,"[99, 'Brenda Jaqueline Blanco Vasquez']",5000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+64,PBNK1/2026/00036,2026-07-01,"[99, 'Brenda Jaqueline Blanco Vasquez']",17876.72,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+61,PBNK1/2026/00034,2026-07-01,"[60, 'Cristhian Daniel Vasquez Gutierrez']",25000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+60,PBNK1/2026/00033,2026-07-01,"[60, 'Cristhian Daniel Vasquez Gutierrez']",17876.72,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+57,False,2026-06-30,False,0.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+58,PBNK6/2026/00001,2026-06-30,"[96, 'Abrasivos Sola Mex, S.A. de C.V.']",5000.0,outbound,supplier,"[23, 'BBVA CTA.7713 USD (USD)']",paid
+56,False,2026-06-29,False,0.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+55,PBNK1/2026/00032,2026-06-25,"[1099, 'MARMOLES PUENTE S DE RL DE CV']",580.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+54,PBNK1/2026/00031,2026-06-23,"[1546, 'ALBERTO MUÑIZ (TMM), ALBERTO MUÑIZ']",150000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+53,PBNK1/2026/00030,2026-06-12,"[1099, 'MARMOLES PUENTE S DE RL DE CV']",116000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+52,PBNK1/2026/00029,2026-06-12,"[96, 'Abrasivos Sola Mex, S.A. de C.V.']",240000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+51,PBNK1/2026/00028,2026-06-12,"[1008, 'CENTRAL DE PETREOS, S DE RL']",324800.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+50,PBNK1/2026/00027,2026-06-12,"[1008, 'CENTRAL DE PETREOS, S DE RL']",174000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+49,PBNK1/2026/00026,2026-06-10,"[5741, 'Grupo Tenerife, S.A. de C.V.']",34800.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+48,PBNK1/2026/00025,2026-06-10,"[51, 'Luis Alberto Trujillo Velazquez']",150000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+47,PBNK1/2026/00024,2026-06-10,"[51, 'Luis Alberto Trujillo Velazquez']",150000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+46,PBNK1/2026/00023,2026-06-09,"[40, 'Tito Toledo Vazquez']",1952.19,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+45,PBNK1/2026/00022,2026-06-05,"[45, 'Juan Manuel Morales Torres']",47500.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+44,PBNK1/2026/00021,2026-06-04,False,11800.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+43,PBNK1/2026/00020,2026-06-02,"[1099, 'MARMOLES PUENTE S DE RL DE CV']",8120.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+42,PBNK1/2026/00019,2026-06-02,"[1099, 'MARMOLES PUENTE S DE RL DE CV']",3480.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+39,PBNK1/2026/00017,2026-05-31,"[120, 'QUIMICA MEXICANA COMERCIAL']",314.24,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+35,PBNK1/2026/00012,2026-05-31,"[5976, 'MIGUEL ANGEL SIERRA']",500.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+36,PBNK1/2026/00013,2026-05-30,"[5976, 'MIGUEL ANGEL SIERRA']",2500.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+40,PBNK1/2026/00018,2026-05-29,False,11760.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+41,PBNK1/2026/00018,2026-05-29,False,11760.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+33,PBNK1/2026/00014,2026-05-29,"[5975, 'CAMARA NACIONAL DE LA INDUSTRIA DE TRANSFORMACION']",2100.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+29,PBNK11/2026/00001,2026-05-27,False,1115.42,outbound,supplier,"[90, 'American LD']",draft
+38,PBNK1/2026/00016,2026-05-27,"[5977, 'LEONARDO REYES']",2500.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+37,PBNK1/2026/00015,2026-05-27,False,458000.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+34,PBNK1/2026/00011,2026-05-27,"[5975, 'CAMARA NACIONAL DE LA INDUSTRIA DE TRANSFORMACION']",2100.0,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+32,PBNK1/2026/00010,2026-05-27,"[1011, 'COMERCIALIZADORA DE PIEDRAS NATURALES SA DE CV']",30000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+31,PBNK1/2026/00009,2026-05-27,"[1095, 'MARMOLES ARCA, SAPI DE CV']",57000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+30,PBNK1/2026/00008,2026-05-27,"[1099, 'MARMOLES PUENTE S DE RL DE CV']",50000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+28,PBNK1/2026/00007,2026-05-27,False,1115.42,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",draft
+27,PBNK1/2026/00007,2026-05-27,False,1115.42,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",canceled
+26,PBNK1/2026/00006,2026-05-27,"[118, 'POLIFORMAS PLASTICAS']",15885.88,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+23,PBNK1/2026/00005,2026-05-27,"[96, 'Abrasivos Sola Mex, S.A. de C.V.']",3770.93,outbound,supplier,"[14, 'BBVA CTA.7934 MX']",paid
+22,PBNK1/2026/00004,2026-05-22,"[5745, 'MARMOLES PICAPIEDRA']",12354.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+21,PBNK1/2026/00003,2026-05-22,"[5750, 'Piedras el tiron']",15000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+20,PBNK1/2026/00002,2026-05-22,"[5750, 'Piedras el tiron']",29116.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+19,PBNK1/2026/00018,2026-05-03,"[46, 'Carlos Solana']",4.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+18,PBNK1/2026/00017,2026-05-03,"[46, 'Carlos Solana']",2.32,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+17,PBNK1/2026/00016,2026-04-29,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+15,PBNK1/2026/00015,2026-04-27,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+16,PBNK1/2026/00001,2026-04-27,"[127, 'Africam Safari, francisco.fernandez@novucentral.com']",100000.0,inbound,customer,"[14, 'BBVA CTA.7934 MX']",paid
+14,PBNK1/2026/00014,2026-04-22,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+13,PBNK1/2026/00013,2026-04-22,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+12,PBNK1/2026/00012,2026-04-21,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+11,PBNK1/2026/00011,2026-04-21,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+10,PBNK1/2026/00010,2026-04-21,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+9,PBNK1/2026/00009,2026-04-21,"[46, 'Carlos Solana']",100.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+8,PBNK1/2026/00008,2026-04-20,"[46, 'Carlos Solana']",30.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+7,PBNK1/2026/00007,2026-04-19,"[46, 'Carlos Solana']",20.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+6,PBNK1/2026/00006,2026-04-16,"[46, 'Carlos Solana']",15.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+5,PBNK1/2026/00005,2026-04-15,"[63, 'Alexis Huey Rosas']",22.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+4,PBNK1/2026/00004,2026-04-15,"[63, 'Alexis Huey Rosas']",36.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+3,PBNK1/2026/00003,2026-04-15,"[66, 'Alejandra Sierra Gonzalez']",16.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+2,PBNK1/2026/00002,2026-04-15,"[66, 'Alejandra Sierra Gonzalez']",24.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
+1,PBNK1/2026/00001,2026-04-14,"[5723, 'Aldo Rafael Mendez Carpinteyro']",20.0,inbound,customer,"[80, 'BBVA CTA.7934 MX']",paid
