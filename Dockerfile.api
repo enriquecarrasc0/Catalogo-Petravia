@@ -55,4 +55,4 @@ ENV DB_PATH=/data/petravia.db
 
 EXPOSE 3000
 
-CMD ["node", "apps/api/dist/apps/api/src/index.js"]
+CMD ["node", "apps/api/dist/index.js"]
