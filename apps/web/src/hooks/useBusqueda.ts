@@ -4,7 +4,7 @@
  * Hook para búsqueda avanzada de lotes.
  */
 import { useMutation, useQuery } from '@tanstack/react-query';
-import type { Lote, ComboLotes } from '@petravia/shared';
+import type { Lote } from '@petravia/shared';
 
 export interface BusquedaParams {
   material?: string;
