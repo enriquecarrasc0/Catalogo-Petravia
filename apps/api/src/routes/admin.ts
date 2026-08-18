@@ -12,7 +12,7 @@
  */
 import { Router } from 'express';
 import { authAdmin, type VendedorRequest } from '../middleware/authClient.js';
-import { crearVendedor, listarVendedores, cambiarEstadoVendedor } from '../services/vendedorAuth.service.js';
+import { crearVendedor, listarVendedores, actualizarVendedor } from '../services/vendedorAuth.service.js';
 import { listarTodosLosTokens, cambiarEstadoTokenAdmin } from '../services/tokens.service.js';
 import { obtenerTodosApartados, obtenerEstadisticas, obtenerResumenClientes } from '../services/admin.service.js';
 import { confirmarVenta, liberarApartado } from '../services/apartados.service.js';
@@ -65,24 +65,42 @@ adminRouter.post('/vendedores', authAdmin, (req: VendedorRequest, res) => {
 
 /**
  * PATCH /api/admin/vendedores/:id (SOLO ADMIN)
- * Activa o desactiva una cuenta de vendedor.
- * Body: { esActivo: boolean }
+ * Edita los datos de una cuenta de vendedor: usuario, nombre, email,
+ * contraseña, si es admin y si está activo. Todos los campos son
+ * opcionales — solo se actualiza lo que venga en el body.
+ * Body: { usuario?, nombre?, email?, password?, esAdmin?, esActivo? }
  */
 adminRouter.patch('/vendedores/:id', authAdmin, (req: VendedorRequest, res) => {
-  const { esActivo } = req.body ?? {};
+  const { usuario, nombre, email, password, esAdmin, esActivo } = req.body ?? {};
+  const esUnoMismo = req.params.id === req.vendedorId;
 
-  if (typeof esActivo !== 'boolean') {
-    res.status(400).json({ ok: false, error: 'esActivo (boolean) es requerido' }); return;
+  if (usuario !== undefined && !USUARIO_RE.test(usuario)) {
+    res.status(400).json({ ok: false, error: 'Usuario inválido: usa 3-40 caracteres (letras, números, punto, guion o guion bajo)' }); return;
   }
-  if (req.params.id === req.vendedorId) {
+  if (nombre !== undefined && !String(nombre).trim()) {
+    res.status(400).json({ ok: false, error: 'El nombre no puede estar vacío' }); return;
+  }
+  if (password !== undefined && (typeof password !== 'string' || password.length < 8)) {
+    res.status(400).json({ ok: false, error: 'La contraseña debe tener al menos 8 caracteres' }); return;
+  }
+  // Salvaguardas: nadie puede desactivarse ni quitarse el rol de admin a
+  // sí mismo — evita que un admin se bloquee por accidente y se quede
+  // sin nadie que pueda revertirlo.
+  if (esActivo === false && esUnoMismo) {
     res.status(400).json({ ok: false, error: 'No puedes desactivar tu propia cuenta' }); return;
+  }
+  if (esAdmin === false && esUnoMismo) {
+    res.status(400).json({ ok: false, error: 'No puedes quitarte a ti mismo el rol de administrador' }); return;
   }
 
   try {
-    const ok = cambiarEstadoVendedor(req.params.id, esActivo);
+    const ok = actualizarVendedor(req.params.id, { usuario, nombre, email, password, esAdmin, esActivo });
     if (!ok) { res.status(404).json({ ok: false, error: 'Vendedor no encontrado' }); return; }
     res.json({ ok: true });
-  } catch (err) {
+  } catch (err: any) {
+    if (String(err?.message ?? '').includes('UNIQUE')) {
+      res.status(409).json({ ok: false, error: `Ya existe un vendedor con el usuario "${usuario}"` }); return;
+    }
     res.status(500).json({ ok: false, error: 'Error actualizando vendedor' });
   }
 });

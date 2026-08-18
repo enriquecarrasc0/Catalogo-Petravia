@@ -8,7 +8,7 @@ import { useState, useMemo } from 'react';
 import { Key, Users, Copy, Check, Trash2, AlertCircle, Loader2,
          Package, Clock, CheckCircle, XCircle, LayoutGrid,
          ShieldCheck, UserPlus, Ban, RotateCcw, Eye, EyeOff,
-         ArrowLeft, ChevronRight, Expand } from 'lucide-react';
+         ArrowLeft, ChevronRight, Expand, Pencil, X, ShieldOff } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import CatalogoPage from '@/pages/CatalogoPage';
 import LoteDetalleInline from '../vendedor/LoteDetalleInline';
@@ -460,6 +460,7 @@ function TabVendedores() {
   const [nombre,   setNombre]   = useState('');
   const [email,    setEmail]    = useState('');
   const [showPass, setShowPass] = useState(false);
+  const [editando, setEditando] = useState<Vendedor | null>(null);
 
   const { data: vendedores = [], isLoading, error } = useQuery({ queryKey: ['admin-vendedores'], queryFn: fetchVendedores });
 
@@ -593,23 +594,188 @@ function TabVendedores() {
                 <p className="text-xs text-stone-400 mt-0.5">Creado {new Date(v.creadoEn).toLocaleString('es-MX')}</p>
               </div>
 
-              {v.id !== miVendedorId && (
-                v.esActivo ? (
-                  <button onClick={() => cambiarEstado.mutate({ id: v.id, esActivo: false })} disabled={cambiarEstado.isPending}
-                    title="Desactivar" className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-stone-200
-                               rounded-md hover:border-red-300 hover:text-red-600 transition disabled:opacity-50 shrink-0">
-                    <Ban size={12} /> Desactivar
-                  </button>
-                ) : (
-                  <button onClick={() => cambiarEstado.mutate({ id: v.id, esActivo: true })} disabled={cambiarEstado.isPending}
-                    title="Reactivar" className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-stone-200
-                               rounded-md hover:border-emerald-300 hover:text-emerald-600 transition disabled:opacity-50 shrink-0">
-                    <RotateCcw size={12} /> Reactivar
-                  </button>
-                )
-              )}
+              <div className="flex items-center gap-2 shrink-0">
+                <button onClick={() => setEditando(v)}
+                  title="Editar" className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-stone-200
+                             rounded-md hover:border-stone-400 hover:text-stone-800 transition">
+                  <Pencil size={12} /> Editar
+                </button>
+
+                {v.id !== miVendedorId && (
+                  v.esActivo ? (
+                    <button onClick={() => cambiarEstado.mutate({ id: v.id, esActivo: false })} disabled={cambiarEstado.isPending}
+                      title="Desactivar" className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-stone-200
+                                 rounded-md hover:border-red-300 hover:text-red-600 transition disabled:opacity-50">
+                      <Ban size={12} /> Desactivar
+                    </button>
+                  ) : (
+                    <button onClick={() => cambiarEstado.mutate({ id: v.id, esActivo: true })} disabled={cambiarEstado.isPending}
+                      title="Reactivar" className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-stone-200
+                                 rounded-md hover:border-emerald-300 hover:text-emerald-600 transition disabled:opacity-50">
+                      <RotateCcw size={12} /> Reactivar
+                    </button>
+                  )
+                )}
+              </div>
             </div>
           ))}
+        </div>
+      </div>
+
+      {editando && (
+        <EditarVendedorModal
+          vendedor={editando}
+          esUnoMismo={editando.id === miVendedorId}
+          onClose={() => setEditando(null)}
+        />
+      )}
+    </div>
+  );
+}
+
+// ─── Modal: editar vendedor (datos + rol admin/vendedor) ───────
+
+function EditarVendedorModal({
+  vendedor, esUnoMismo, onClose,
+}: {
+  vendedor: Vendedor;
+  esUnoMismo: boolean;
+  onClose: () => void;
+}) {
+  const qc = useQueryClient();
+  const [usuario,  setUsuario]  = useState(vendedor.usuario);
+  const [nombre,   setNombre]   = useState(vendedor.nombre);
+  const [email,    setEmail]    = useState(vendedor.email ?? '');
+  const [esAdmin,  setEsAdmin]  = useState(vendedor.esAdmin);
+  const [password, setPassword] = useState('');
+  const [showPass, setShowPass] = useState(false);
+
+  // No se puede quitar el rol de admin a la propia cuenta — evita que
+  // un admin se bloquee a sí mismo sin nadie que lo pueda revertir.
+  const bloquearQuitarseAdmin = esUnoMismo && vendedor.esAdmin;
+
+  const guardar = useMutation({
+    mutationFn: async () => {
+      const body: Record<string, unknown> = {
+        usuario: usuario.trim(),
+        nombre:  nombre.trim(),
+        email:   email.trim() || null,
+        esAdmin,
+      };
+      if (password.trim()) body.password = password.trim();
+
+      const res = await fetch(`${BASE}/admin/vendedores/${vendedor.id}`, {
+        method: 'PATCH', headers: adminHeaders(), body: JSON.stringify(body),
+      });
+      const json = await res.json();
+      if (!res.ok) throw new Error(json.error ?? 'Error actualizando vendedor');
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: ['admin-vendedores'] });
+      onClose();
+    },
+  });
+
+  const passwordValida = password.trim().length === 0 || password.trim().length >= 8;
+  const puedeGuardar = usuario.trim().length >= 3 && nombre.trim().length > 0 && passwordValida;
+
+  return (
+    <div className="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div className="bg-white rounded-xl shadow-xl max-w-md w-full p-6" onClick={e => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-5">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-stone-100 flex items-center justify-center">
+              <Pencil size={16} className="text-stone-600" />
+            </div>
+            <h2 className="text-base font-medium text-stone-800">Editar vendedor</h2>
+          </div>
+          <button onClick={onClose} className="text-stone-400 hover:text-stone-600" title="Cerrar">
+            <X size={18} />
+          </button>
+        </div>
+
+        <div className="space-y-3 mb-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1">Usuario</label>
+              <input value={usuario} onChange={e => setUsuario(e.target.value)} autoComplete="off"
+                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-400" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-stone-600 mb-1">Nombre</label>
+              <input value={nombre} onChange={e => setNombre(e.target.value)}
+                className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-400" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Email (opcional)</label>
+            <input value={email} onChange={e => setEmail(e.target.value)} type="email"
+              className="w-full px-3 py-2 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-400" />
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-stone-600 mb-1">Nueva contraseña (opcional)</label>
+            <div className="relative">
+              <input type={showPass ? 'text' : 'password'} value={password} onChange={e => setPassword(e.target.value)}
+                placeholder="Déjala vacía para no cambiarla" autoComplete="new-password"
+                className="w-full px-3 py-2 pr-10 text-sm border border-stone-200 rounded-md focus:outline-none focus:ring-2 focus:ring-stone-400" />
+              <button type="button" onClick={() => setShowPass(v => !v)}
+                className="absolute right-3 top-1/2 -translate-y-1/2 text-stone-400 hover:text-stone-600">
+                {showPass ? <EyeOff size={14} /> : <Eye size={14} />}
+              </button>
+            </div>
+            {!passwordValida && <p className="text-xs text-red-600 mt-1">Mínimo 8 caracteres</p>}
+          </div>
+
+          <div>
+            <label className="block text-xs font-medium text-stone-600 mb-1.5">Rol</label>
+            <div className="flex items-center gap-1 p-1 bg-stone-100 rounded-md w-fit">
+              <button type="button" onClick={() => setEsAdmin(false)} disabled={bloquearQuitarseAdmin}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition
+                  ${!esAdmin ? 'bg-white shadow-sm text-stone-800 font-medium' : 'text-stone-500'}
+                  ${bloquearQuitarseAdmin ? 'opacity-40 cursor-not-allowed' : ''}`}>
+                <Users size={12} /> Vendedor
+              </button>
+              <button type="button" onClick={() => setEsAdmin(true)}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-xs rounded transition
+                  ${esAdmin ? 'bg-white shadow-sm text-indigo-700 font-medium' : 'text-stone-500'}`}>
+                <ShieldCheck size={12} /> Administrador
+              </button>
+            </div>
+            {bloquearQuitarseAdmin ? (
+              <p className="flex items-center gap-1.5 text-xs text-stone-400 mt-1.5">
+                <ShieldOff size={11} /> No puedes quitarte a ti mismo el rol de administrador.
+              </p>
+            ) : esAdmin && !vendedor.esAdmin ? (
+              <p className="text-xs text-amber-600 mt-1.5">
+                Como administrador verá y podrá gestionar TODOS los vendedores, clientes y apartados — no solo los propios.
+              </p>
+            ) : !esAdmin && vendedor.esAdmin ? (
+              <p className="text-xs text-amber-600 mt-1.5">
+                Pasará a ver solo sus propios clientes y apartados, como cualquier vendedor.
+              </p>
+            ) : null}
+          </div>
+        </div>
+
+        {guardar.error && (
+          <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-100 rounded-md mb-3">
+            <AlertCircle size={14} className="text-red-500 shrink-0" />
+            <p className="text-xs text-red-600">{(guardar.error as Error).message}</p>
+          </div>
+        )}
+
+        <div className="flex items-center gap-2">
+          <button onClick={onClose}
+            className="flex-1 py-2 text-sm border border-stone-200 rounded-md hover:bg-stone-50 transition">
+            Cancelar
+          </button>
+          <button onClick={() => guardar.mutate()} disabled={guardar.isPending || !puedeGuardar}
+            className="flex-1 flex items-center justify-center gap-2 py-2 bg-stone-900 text-white text-sm rounded-md hover:bg-stone-800 transition disabled:opacity-50">
+            {guardar.isPending && <Loader2 size={14} className="animate-spin" />}
+            Guardar cambios
+          </button>
         </div>
       </div>
     </div>

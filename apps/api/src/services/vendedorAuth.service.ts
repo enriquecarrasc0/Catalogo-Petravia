@@ -141,3 +141,35 @@ export function cambiarEstadoVendedor(id: string, esActivo: boolean): boolean {
   const result = db.prepare(`UPDATE vendedores SET es_activo = ? WHERE id = ?`).run(esActivo ? 1 : 0, id);
   return result.changes > 0;
 }
+
+/**
+ * Edita los datos de una cuenta de vendedor ya dada de alta: usuario,
+ * nombre, email, contraseña, si es admin y si está activo. Todos los
+ * campos son opcionales — solo se actualiza lo que venga definido, así
+ * que se puede llamar tanto para un edit completo desde el formulario
+ * como para un cambio puntual (ej. solo esActivo o solo esAdmin).
+ */
+export function actualizarVendedor(id: string, params: {
+  usuario?: string;
+  nombre?: string;
+  email?: string | null;
+  esAdmin?: boolean;
+  esActivo?: boolean;
+  password?: string;
+}): boolean {
+  const campos: string[] = [];
+  const valores: any[] = [];
+
+  if (params.usuario !== undefined)  { campos.push('usuario = ?');       valores.push(params.usuario); }
+  if (params.nombre !== undefined)   { campos.push('nombre = ?');        valores.push(params.nombre); }
+  if (params.email !== undefined)    { campos.push('email = ?');         valores.push(params.email || null); }
+  if (params.esAdmin !== undefined)  { campos.push('es_admin = ?');      valores.push(params.esAdmin ? 1 : 0); }
+  if (params.esActivo !== undefined) { campos.push('es_activo = ?');     valores.push(params.esActivo ? 1 : 0); }
+  if (params.password !== undefined) { campos.push('password_hash = ?'); valores.push(hashPassword(params.password)); }
+
+  if (campos.length === 0) return true; // nada que actualizar
+
+  valores.push(id);
+  const result = db.prepare(`UPDATE vendedores SET ${campos.join(', ')} WHERE id = ?`).run(...valores);
+  return result.changes > 0;
+}
