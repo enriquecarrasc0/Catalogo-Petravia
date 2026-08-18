@@ -42,12 +42,28 @@ export function useClientLogin() {
   });
 }
 
+const CLIENT_STORAGE_KEY = 'petravia_client';
+
+function leerClienteAlmacenado(): ClientData | null {
+  const stored = sessionStorage.getItem(CLIENT_STORAGE_KEY);
+  return stored ? (JSON.parse(stored) as ClientData) : null;
+}
+
 /**
  * Obtiene cliente desde sessionStorage (más seguro que localStorage para tokens).
  */
 export function useCurrentClient(): ClientData | null {
-  const stored = sessionStorage.getItem('petravia_client');
-  return stored ? (JSON.parse(stored) as ClientData) : null;
+  return leerClienteAlmacenado();
+}
+
+/**
+ * Solo el token del cliente actual (si hay uno), sin el resto de sus
+ * datos. Se usa fuera de React (ej. en I18nContext) para que la
+ * preferencia de idioma se guarde por-cliente y no se comparta entre
+ * distintos clientes que usen el mismo navegador/dispositivo.
+ */
+export function getStoredClientToken(): string | null {
+  return leerClienteAlmacenado()?.token ?? null;
 }
 
 /**
@@ -55,7 +71,7 @@ export function useCurrentClient(): ClientData | null {
  */
 export function useSaveClient() {
   return (client: ClientData) => {
-    sessionStorage.setItem('petravia_client', JSON.stringify(client));
+    sessionStorage.setItem(CLIENT_STORAGE_KEY, JSON.stringify(client));
   };
 }
 
@@ -64,6 +80,6 @@ export function useSaveClient() {
  */
 export function useClientLogout() {
   return () => {
-    sessionStorage.removeItem('petravia_client');
+    sessionStorage.removeItem(CLIENT_STORAGE_KEY);
   };
 }

@@ -9,6 +9,7 @@ import { useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, User, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useClientLogin, useSaveClient, useCurrentClient } from '@/hooks/useClientAuth';
 import { getVendedorSession, setVendedorSession } from '@/lib/vendedorSession';
+import { useI18n } from '@/i18n/I18nContext';
 import clsx from 'clsx';
 
 type Vista = 'selector' | 'vendedor' | 'cliente';
@@ -21,6 +22,7 @@ export default function LoginPage() {
   const existente  = useCurrentClient();
   const saveClient = useSaveClient();
   const { mutate: loginCliente, isPending, error: errorCliente } = useClientLogin();
+  const { forzarEspanol, restaurarLocaleCliente } = useI18n();
 
   const [vista,       setVista]       = useState<Vista>('selector');
   const [showPass,    setShowPass]    = useState(false);
@@ -57,6 +59,11 @@ export default function LoginPage() {
         nombre: json.nombre,
         esAdmin: Boolean(json.esAdmin),
       });
+      // El vendedor/admin siempre ve el catálogo en español, sin importar
+      // qué idioma haya dejado elegido un cliente en este mismo navegador.
+      // Como este cambio de pantalla es una navegación SPA (sin recargar
+      // la página), hay que forzarlo explícitamente aquí.
+      forzarEspanol();
       navigate('/vendedor');
     } catch {
       setErrorVendedor('No se pudo conectar con el servidor');
@@ -70,6 +77,11 @@ export default function LoginPage() {
     loginCliente(token, {
       onSuccess: (data) => {
         saveClient(data);
+        // Retoma la preferencia de idioma de ESTE cliente en particular
+        // (por su token) — por si el idioma había quedado forzado en
+        // español por una sesión de vendedor/admin previa en la misma
+        // pestaña, o si el dispositivo lo usó antes otro cliente.
+        restaurarLocaleCliente();
         navigate('/seleccion');
       },
     });
