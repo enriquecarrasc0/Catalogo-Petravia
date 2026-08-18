@@ -95,6 +95,31 @@ const SCHEMA = `
     saldo_m2        REAL                  -- snapshot de m² al momento de compra
   );
 
+  -- ─── Favoritos ──────────────────────────────────────────────
+  -- A diferencia de "apartados", esto NO reserva el lote ni notifica
+  -- al vendedor: es una lista puramente personal del cliente ("me gusta
+  -- esto"), para que después decida cuáles apartar de verdad.
+  CREATE TABLE IF NOT EXISTS favoritos (
+    id              TEXT PRIMARY KEY,     -- UUID
+    lote_id         TEXT NOT NULL,        -- name del stock.lot en Odoo
+    cliente_email   TEXT NOT NULL,
+    creado_en       TEXT DEFAULT (datetime('now')),
+    -- Instantánea del lote al momento de agregarlo a favoritos — el
+    -- navegador ya tiene estos datos enfrente (viene de la tarjeta del
+    -- catálogo) cuando se le da corazón, así que se guardan aquí de una
+    -- vez. Con esto, favoritos NUNCA vuelve a consultar Odoo — ni al
+    -- guardar ni al leer — es 100% independiente y local.
+    material        TEXT,
+    grupo           TEXT,
+    acabado         TEXT,
+    tipo            TEXT,
+    saldo_m2        REAL,
+    saldo_m3        REAL,
+    saldo_piezas    REAL,
+    foto_url        TEXT,
+    UNIQUE(lote_id, cliente_email)
+  );
+
   -- ─── Índices (solo los que NO dependen de vendedor_id) ────
   -- Los índices sobre vendedor_id se crean más abajo, después de
   -- agregarColumnaSiFalta(), porque en instalaciones existentes
@@ -106,6 +131,8 @@ const SCHEMA = `
   CREATE INDEX IF NOT EXISTS idx_historial_email    ON historial_compras(cliente_email);
   CREATE INDEX IF NOT EXISTS idx_historial_lote     ON historial_compras(lote_id);
   CREATE INDEX IF NOT EXISTS idx_vendedores_usuario ON vendedores(usuario);
+  CREATE INDEX IF NOT EXISTS idx_favoritos_cliente  ON favoritos(cliente_email);
+  CREATE INDEX IF NOT EXISTS idx_favoritos_lote     ON favoritos(lote_id);
 `;
 
 db.exec(SCHEMA);

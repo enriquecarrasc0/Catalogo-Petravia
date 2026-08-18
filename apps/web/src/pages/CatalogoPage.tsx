@@ -1,6 +1,6 @@
 import { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
-import { Search, LayoutGrid, Gem, ChevronLeft, Package, X, PackageCheck, Loader2 } from 'lucide-react';
+import { Search, LayoutGrid, Gem, ChevronLeft, Package, X, PackageCheck, Loader2, Heart } from 'lucide-react';
 import { useLotes } from '@/hooks/useLotes';
 import { useCatalogoStore } from '@/store/catalogoStore';
 import LoteCardShowcase from '@/components/catalog/LoteCardShowcase';
@@ -8,12 +8,13 @@ import FiltrosPanel from '@/components/catalog/FiltrosPanel';
 import MaterialesGaleria from '@/components/catalog/MaterialesGaleria';
 import { useCurrentClient } from '@/hooks/useClientAuth';
 import { useMisApartados, useApartar } from '@/hooks/useApartar';
+import { useMisFavoritos, useToggleFavorito, snapshotDeLote } from '@/hooks/useFavoritos';
 import { getVendedorSession } from '@/lib/vendedorSession';
 import { useI18n } from '@/i18n/I18nContext';
 import { formatM2, formatM3, type GrupoMaterial } from '@petravia/shared';
 import { useQueryClient } from '@tanstack/react-query';
 
-export type PanelCliente = 'apartados' | null;
+export type PanelCliente = 'apartados' | 'favoritos' | null;
 
 // Orden fijo de materiales para las secciones agrupadas del catálogo.
 const ORDEN_GRUPOS: GrupoMaterial[] = [
@@ -60,6 +61,9 @@ export default function CatalogoPage({ onLoteClick }: Props) {
 
   const client = useCurrentClient();
   const { data: apartados = [] } = useMisApartados(client?.token ?? null);
+  const { data: favoritos = [] } = useMisFavoritos(client?.token ?? null);
+  const { toggle: toggleFavorito } = useToggleFavorito(client?.token ?? null);
+  const favoritosIds = useMemo(() => new Set(favoritos.map(f => f.loteId)), [favoritos]);
   const esAdmin = Boolean(getVendedorSession());
 
   const togglePanel = (p: PanelCliente) => setPanelCliente(prev => prev === p ? null : p);
@@ -71,6 +75,7 @@ export default function CatalogoPage({ onLoteClick }: Props) {
   const queryClient = useQueryClient();
 
   const puedeSeleccionar = Boolean(client) && !onLoteClick;
+  const puedeFavoritos = Boolean(client) && !onLoteClick;
 
   const toggleSeleccion = (loteId: string) => {
     setSeleccionados(prev => {
@@ -192,6 +197,24 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                   <span className="ml-0.5 px-1.5 rounded-full"
                     style={{ background: panelCliente === 'apartados' ? 'rgba(255,255,255,0.3)' : 'var(--gold)', color: 'white', fontSize: '10px', lineHeight: '1.4' }}>
                     {apartados.length}
+                  </span>
+                )}
+              </button>
+
+              <button onClick={() => togglePanel('favoritos')}
+                className="flex items-center gap-1.5 text-xs px-4 py-1.5 uppercase tracking-wider transition-all duration-200"
+                style={{
+                  borderRadius: '999px',
+                  background: panelCliente === 'favoritos' ? 'var(--gold)' : 'transparent',
+                  color: panelCliente === 'favoritos' ? 'white' : 'var(--muted)',
+                }}
+              >
+                <Heart size={12} strokeWidth={1.75} />
+                {t('panelCliente.favoritos')}
+                {favoritos.length > 0 && (
+                  <span className="ml-0.5 px-1.5 rounded-full"
+                    style={{ background: panelCliente === 'favoritos' ? 'rgba(255,255,255,0.3)' : 'var(--gold)', color: 'white', fontSize: '10px', lineHeight: '1.4' }}>
+                    {favoritos.length}
                   </span>
                 )}
               </button>
@@ -355,6 +378,8 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                             checkable={puedeSeleccionar && lote.estado === 'disponible'}
                             checked={seleccionados.has(lote.id)}
                             onToggleCheck={() => toggleSeleccion(lote.id)}
+                            favorito={puedeFavoritos ? favoritosIds.has(lote.id) : undefined}
+                            onToggleFavorito={puedeFavoritos ? () => toggleFavorito(lote.id, favoritosIds.has(lote.id), snapshotDeLote(lote)) : undefined}
                           />
                         ))}
                       </div>
@@ -375,6 +400,8 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                         checkable={puedeSeleccionar && lote.estado === 'disponible'}
                         checked={seleccionados.has(lote.id)}
                         onToggleCheck={() => toggleSeleccion(lote.id)}
+                        favorito={puedeFavoritos ? favoritosIds.has(lote.id) : undefined}
+                        onToggleFavorito={puedeFavoritos ? () => toggleFavorito(lote.id, favoritosIds.has(lote.id), snapshotDeLote(lote)) : undefined}
                       />
                     ))}
                   </div>

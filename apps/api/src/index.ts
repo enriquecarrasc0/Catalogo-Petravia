@@ -17,6 +17,7 @@ import { lotesRouter }     from './routes/lotes.js';
 import { authRouter }      from './routes/auth.js';
 import { vendedorRouter }  from './routes/vendedor.js';
 import { apartadosRouter } from './routes/apartados.js';
+import { favoritosRouter } from './routes/favoritos.js';
 import { imagenesRouter }  from './routes/imagenes.js';
 import { adminRouter }     from './routes/admin.js';
 import { errorHandler }    from './middleware/errorHandler.js';
@@ -33,6 +34,7 @@ app.use(cors({
 app.use(express.json());
 
 app.use('/api/apartados', apartadosRouter);
+app.use('/api/favoritos', favoritosRouter);
 app.use('/api/lotes',     lotesRouter);
 app.use('/api/auth',      authRouter);
 app.use('/api/vendedor',  vendedorRouter);

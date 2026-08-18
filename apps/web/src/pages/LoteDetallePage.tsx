@@ -1,11 +1,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, Link } from 'react-router-dom';
-import { ArrowLeft, ImageOff, Package, Expand, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, ImageOff, Package, Expand, X, ChevronLeft, ChevronRight, Heart } from 'lucide-react';
 import { useLote } from '@/hooks/useLotes';
 import EstadoBadge from '@/components/catalog/EstadoBadge';
 import ApartarModal from '@/components/catalog/ApartarModal';
 import { useCurrentClient } from '@/hooks/useClientAuth';
+import { useMisFavoritos, useToggleFavorito, snapshotDeLote } from '@/hooks/useFavoritos';
 import { useT } from '@/i18n/I18nContext';
 import { formatM2, formatM3, formatSaldoLote, formatDimension, parseTituloLote } from '@petravia/shared';
 
@@ -103,6 +104,9 @@ export default function LoteDetallePage() {
   const [lightboxAbierto, setLightboxAbierto] = useState(false);
   const client = useCurrentClient();
   const t = useT();
+  const { data: favoritos = [] } = useMisFavoritos(client?.token ?? null);
+  const { toggle: toggleFavorito } = useToggleFavorito(client?.token ?? null);
+  const esFavorito = lote ? favoritos.some(f => f.loteId === lote.id) : false;
 
   if (isLoading) {
     return (
@@ -219,7 +223,21 @@ export default function LoteDetallePage() {
             >
               {titulo}
             </h1>
-            <EstadoBadge estado={lote.estado} />
+            <div className="flex flex-col items-end gap-2 shrink-0">
+              <EstadoBadge estado={lote.estado} />
+              {client && (
+                <button
+                  type="button"
+                  onClick={() => toggleFavorito(lote.id, esFavorito, snapshotDeLote(lote))}
+                  title={esFavorito ? t('loteCard.quitarFavorito') : t('loteCard.agregarFavorito')}
+                  className="flex items-center gap-1.5 text-xs transition-colors"
+                  style={{ color: esFavorito ? '#e0435a' : 'var(--muted)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+                >
+                  <Heart size={15} fill={esFavorito ? '#e0435a' : 'none'} strokeWidth={2} />
+                  {t(esFavorito ? 'loteCard.quitarFavorito' : 'loteCard.agregarFavorito')}
+                </button>
+              )}
+            </div>
           </div>
 
           {presentacion && (

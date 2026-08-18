@@ -139,6 +139,48 @@ export interface Apartado {
   expiraEn: string;         // ISO date (creado_en + 48h)
 }
 
+/**
+ * Favorito — a diferencia de Apartado, no reserva el lote ni notifica al
+ * vendedor. Es una lista puramente personal del cliente ("me gustó esto"),
+ * para que después decida cuáles apartar de verdad desde su resumen.
+ *
+ * A propósito NUNCA se conecta con Odoo — ni para guardar ni para leer.
+ * Guarda una instantánea de los datos del lote (material, foto, m²) tal
+ * como se veían en el catálogo al momento de darle corazón; el navegador
+ * ya tiene esos datos enfrente en ese instante, así que se mandan una vez
+ * y quedan aquí. Vive 100% en esta tabla local.
+ */
+export interface Favorito {
+  id: string;               // UUID
+  loteId: string;            // FK → Lote.id
+  clienteEmail: string;
+  creadoEn: string;          // ISO date
+  // Instantánea del lote (todos opcionales por si algún cliente viejo no
+  // los mandó todavía) — nunca se vuelven a pedir a Odoo.
+  material?: string | null;
+  grupo?: string | null;
+  acabado?: string | null;
+  tipo?: TipoLote | null;
+  saldoM2?: number | null;
+  saldoM3?: number | null;
+  saldoPiezas?: number | null;
+  fotoUrl?: string | null;
+}
+
+/** Instantánea del lote tal como se ve en pantalla al momento de darle
+ *  corazón — es lo único que favoritos necesita; nunca vuelve a pedirse
+ *  a Odoo, ni al guardar ni al leer. */
+export interface SnapshotLote {
+  material?: string | null;
+  grupo?: string | null;
+  acabado?: string | null;
+  tipo?: string | null;
+  saldoM2?: number | null;
+  saldoM3?: number | null;
+  saldoPiezas?: number | null;
+  fotoUrl?: string | null;
+}
+
 export interface PaginatedResponse<T> {
   items: T[];
   total: number;

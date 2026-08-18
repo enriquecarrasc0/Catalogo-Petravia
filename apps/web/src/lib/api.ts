@@ -5,7 +5,7 @@
  * Toda llamada al backend pasa por aquí → un solo lugar para
  * agregar auth headers, interceptores, manejo de errores, etc.
  */
-import type { ApiResult, Lote, PaginatedResponse, FiltrosCatalogo } from '@petravia/shared';
+import type { ApiResult, Lote, PaginatedResponse, FiltrosCatalogo, Favorito, SnapshotLote } from '@petravia/shared';
 import { getVendedorSession } from '@/lib/vendedorSession';
 
 export interface HistorialCompra {
@@ -34,12 +34,19 @@ const BASE_URL = import.meta.env.VITE_API_URL ?? '/api';
 async function request<T>(path: string, init?: RequestInit): Promise<T> {
   const sesionVendedor = getVendedorSession();
   const res = await fetch(`${BASE_URL}${path}`, {
+    ...init,
+    // OJO: "headers" va DESPUÉS de "...init" a propósito. Si fuera al
+    // revés, "...init" (que también trae su propio "headers", ej. el
+    // Authorization de un cliente) pisaría por completo este objeto
+    // combinado y se perdería "Content-Type" — eso es justo lo que pasaba:
+    // cualquier POST con body + headers propios (como favoritos) le
+    // llegaba al servidor SIN Content-Type, así que express.json() nunca
+    // interpretaba el cuerpo como JSON y req.body quedaba vacío.
     headers: {
       'Content-Type': 'application/json',
       ...(sesionVendedor ? { Authorization: `Bearer ${sesionVendedor.token}` } : {}),
       ...init?.headers,
     },
-    ...init,
   });
 
   const json: ApiResult<T> = await res.json();
@@ -84,6 +91,30 @@ export const api = {
     /** Historial de compras confirmadas del cliente. */
     historial(token: string): Promise<HistorialCompra[]> {
       return request('/apartados/historial', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+  },
+
+  // "Favoritos" — a propósito usa el MISMO helper request() que todo lo
+  // demás (lotes, apartados), en vez de construir su propia URL por
+  // separado. Nunca toca Odoo: guarda/lee una instantánea del lote.
+  favoritos: {
+    list(token: string): Promise<Favorito[]> {
+      return request('/favoritos', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+    },
+    add(token: string, loteId: string, snapshot: SnapshotLote = {}): Promise<Favorito> {
+      return request('/favoritos', {
+        method: 'POST',
+        headers: { Authorization: `Bearer ${token}` },
+        body: JSON.stringify({ loteId, ...snapshot }),
+      });
+    },
+    remove(token: string, loteId: string): Promise<{ quitado: boolean }> {
+      return request(`/favoritos/${encodeURIComponent(loteId)}`, {
+        method: 'DELETE',
         headers: { Authorization: `Bearer ${token}` },
       });
     },

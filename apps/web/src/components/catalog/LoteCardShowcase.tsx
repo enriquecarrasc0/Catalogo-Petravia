@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom';
-import { ImageOff, Images, Check, ArrowUpRight, MapPin } from 'lucide-react';
+import { ImageOff, Images, Check, ArrowUpRight, MapPin, Heart } from 'lucide-react';
 import type { Lote } from '@petravia/shared';
 import { formatSaldoLote, formatDimension } from '@petravia/shared';
 import EstadoBadge from './EstadoBadge';
@@ -35,6 +35,15 @@ interface Props {
   checkable?: boolean;
   checked?: boolean;
   onToggleCheck?: () => void;
+  /**
+   * Corazón de favoritos — a diferencia de `checkable` (selección múltiple
+   * para apartar), esto NUNCA reserva el lote ni notifica al vendedor: es
+   * solo la lista personal del cliente ("me gustó esto"). Va del lado
+   * contrario al círculo de selección — esquina superior IZQUIERDA, justo
+   * debajo del badge de estado.
+   */
+  favorito?: boolean;
+  onToggleFavorito?: () => void;
 }
 
 /**
@@ -43,7 +52,7 @@ interface Props {
  * degradado. Es la única vista del catálogo principal, y también se
  * reutiliza (con `size="compact"`) en el buscador avanzado.
  */
-export default function LoteCardShowcase({ lote, onClick, seleccionado, destacado, size = 'default', checkable, checked, onToggleCheck }: Props) {
+export default function LoteCardShowcase({ lote, onClick, seleccionado, destacado, size = 'default', checkable, checked, onToggleCheck, favorito, onToggleFavorito }: Props) {
   const t = useT();
   const foto = lote.fotos[0];
   const esVendido = lote.estado === 'vendido';
@@ -109,10 +118,44 @@ export default function LoteCardShowcase({ lote, onClick, seleccionado, destacad
         }}
       />
 
-      {/* Badge de estado */}
-      <div className="absolute" style={{ top: compact ? 8 : 12, left: compact ? 8 : 12 }}>
-        <EstadoBadge estado={lote.estado} compact={compact} />
-      </div>
+      {/* Badge de estado — se oculta cuando hay corazón (vista de cliente):
+          el cliente solo ve lotes disponibles, así que decir "Disponible"
+          ahí es redundante; el corazón toma ese mismo lugar. Para
+          vendedor/admin (sin corazón) el badge sigue mostrando el estado
+          real (apartado/vendido), que sí es información útil para ellos. */}
+      {!onToggleFavorito && (
+        <div className="absolute" style={{ top: compact ? 8 : 12, left: compact ? 8 : 12 }}>
+          <EstadoBadge estado={lote.estado} compact={compact} />
+        </div>
+      )}
+
+      {/* Corazón de favoritos — lado izquierdo (contrario al círculo de
+          selección, que va a la derecha), en el lugar del badge de estado.
+          A propósito solo el ícono, sin círculo de fondo (mismo tamaño que
+          el círculo de selección, pero sin la "pastilla" blanca). */}
+      {onToggleFavorito && (
+        <button
+          type="button"
+          title={favorito ? t('loteCard.quitarFavorito') : t('loteCard.agregarFavorito')}
+          onClick={e => { e.preventDefault(); e.stopPropagation(); onToggleFavorito(); }}
+          className="absolute flex items-center justify-center transition-transform active:scale-90"
+          style={{
+            top: compact ? 8 : 12, left: compact ? 8 : 12,
+            width: compact ? 20 : 26, height: compact ? 20 : 26,
+            background: 'transparent',
+            border: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <Heart
+            size={compact ? 20 : 26}
+            color={favorito ? '#e0435a' : 'white'}
+            fill={favorito ? '#e0435a' : 'none'}
+            strokeWidth={2}
+            style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }}
+          />
+        </button>
+      )}
 
       {/* Contador de fotos */}
       {lote.fotos.length > 1 && (

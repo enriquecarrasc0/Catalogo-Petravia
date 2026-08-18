@@ -4,6 +4,7 @@ import { useCatalogoStore } from '@/store/catalogoStore';
 import { getVendedorSession } from '@/lib/vendedorSession';
 import { useT } from '@/i18n/I18nContext';
 import MisApartados from './MisApartados';
+import MisFavoritos from './MisFavoritos';
 import BuscadorAvanzado from './BuscadorAvanzado';
 import type { Acabado } from '@petravia/shared';
 import type { ClientData } from '@/hooks/useClientAuth';
@@ -185,10 +186,11 @@ export default function FiltrosPanel({ client, panelCliente, setPanelCliente }: 
         </div>
       )}
 
-      {/* Mis Apartados y Búsqueda avanzada — pestañas emergentes, no ocupan espacio en el flujo */}
+      {/* Mis Apartados, Favoritos y Búsqueda avanzada — pestañas emergentes, no ocupan espacio en el flujo */}
       {client && (
         <>
           <MisApartados client={client} isOpen={panelCliente === 'apartados'} onClose={() => setPanelCliente(null)} />
+          <MisFavoritos client={client} isOpen={panelCliente === 'favoritos'} onClose={() => setPanelCliente(null)} />
           <BuscadorAvanzado isOpen={busquedaAbierta} onClose={() => setBusquedaAbierta(false)} />
         </>
       )}
