@@ -47,6 +47,28 @@
 html {
   overflow-y: scroll;
   scrollbar-gutter: stable;
+  /* Salvaguarda: si algún componente llega a desbordarse horizontalmente
+     (ej. una fila flex sin envolver en pantallas angostas), esto evita que
+     TODA la página se vea "empequeñecida"/zoom-out en móvil — el navegador
+     ya no tiene que ensanchar el viewport de layout para acomodar el
+     contenido que se sale. El desbordante queda recortado en vez de forzar
+     un scroll horizontal de toda la página. */
+  overflow-x: hidden;
+}
+
+body {
+  overflow-x: hidden;
+}
+
+/* Oculta la barra de scroll en las pestañas con scroll horizontal en
+   móvil (Apartados/Clientes/Catálogo/Vendedores), manteniendo el gesto
+   de swipe funcional. */
+.scrollbar-none {
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE/Edge */
+}
+.scrollbar-none::-webkit-scrollbar {
+  display: none; /* Chrome/Safari/WhatsApp webview */
 }
 
 :root {

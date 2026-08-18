@@ -110,8 +110,8 @@ export default function AdminPanel() {
 
   return (
     <div>
-      <div className="max-w-6xl mx-auto px-6 pt-6">
-        <div className="flex gap-1 mb-6 border-b border-stone-200">
+      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
+        <div className="flex gap-1 mb-6 border-b border-stone-200 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
           {([
             { id: 'apartados',  label: 'Apartados',  Icon: Package },
             { id: 'clientes',   label: 'Clientes',    Icon: Key },
@@ -119,7 +119,7 @@ export default function AdminPanel() {
             { id: 'vendedores', label: 'Vendedores', Icon: ShieldCheck },
           ] as const).map(({ id, label, Icon }) => (
             <button key={id} onClick={() => cambiarTab(id)}
-              className={`flex items-center gap-2 px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px
+              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap
                 ${tab === id
                   ? 'border-stone-900 text-stone-900 font-medium'
                   : 'border-transparent text-stone-400 hover:text-stone-700'}`}>

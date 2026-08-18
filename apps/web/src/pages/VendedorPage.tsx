@@ -38,9 +38,9 @@ export default function VendedorPage() {
 
   return (
     <div className="min-h-screen bg-stone-50">
-      <div className="bg-white border-b border-stone-200 px-6 py-4 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
+      <div className="bg-white border-b border-stone-200 px-4 sm:px-6 py-4 flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+        <div className="flex items-center gap-2 sm:gap-3 min-w-0">
+          <div className="flex items-center gap-2 shrink-0">
             <img src="/brand/isotipo-beige.png" alt="" className="h-7 w-auto" />
             <span
               className="font-display uppercase leading-none"
@@ -49,14 +49,14 @@ export default function VendedorPage() {
               Petravia
             </span>
           </div>
-          <span className="text-stone-300">·</span>
-          <span className="text-sm text-stone-500">
+          <span className="text-stone-300 hidden sm:inline">·</span>
+          <span className="text-sm text-stone-500 truncate min-w-0">
             {sesion.esAdmin ? 'Panel Admin' : 'Panel Vendedor'} · {sesion.nombre}
           </span>
         </div>
         <button
           onClick={handleLogout}
-          className="px-4 py-1.5 text-sm text-stone-600 hover:text-stone-900
+          className="shrink-0 px-3 sm:px-4 py-1.5 text-sm text-stone-600 hover:text-stone-900
                      border border-stone-200 rounded-md hover:border-stone-400 transition"
         >
           Cerrar sesión
