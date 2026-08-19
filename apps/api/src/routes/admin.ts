@@ -15,7 +15,7 @@ import { authAdmin, type VendedorRequest } from '../middleware/authClient.js';
 import { crearVendedor, listarVendedores, actualizarVendedor } from '../services/vendedorAuth.service.js';
 import { listarTodosLosTokens, cambiarEstadoTokenAdmin } from '../services/tokens.service.js';
 import { obtenerTodosApartados, obtenerEstadisticas, obtenerResumenClientes } from '../services/admin.service.js';
-import { confirmarVenta, liberarApartado } from '../services/apartados.service.js';
+import { confirmarVenta, liberarApartado, prorrogarApartado } from '../services/apartados.service.js';
 
 const adminRouter = Router();
 
@@ -196,6 +196,27 @@ adminRouter.delete('/apartados/:id', authAdmin, (req: VendedorRequest, res, next
     const ok = liberarApartado(req.params.id);
     if (!ok) { res.status(404).json({ ok: false, error: 'Apartado no encontrado' }); return; }
     res.json({ ok: true });
+  } catch (err) { next(err); }
+});
+
+/**
+ * POST /api/admin/apartados/:id/prorrogar  { horas?: number }  (SOLO ADMIN)
+ * Da más tiempo a un apartado (de cualquier vendedor), sumando horas a
+ * partir de ahora. Por defecto 24h; acepta un rango de -168 a 168
+ * (una semana) por si algún día hace falta acortar el plazo en vez de
+ * extenderlo.
+ */
+adminRouter.post('/apartados/:id/prorrogar', authAdmin, (req: VendedorRequest, res, next) => {
+  try {
+    const horasRaw = req.body?.horas;
+    const horas = Number.isFinite(Number(horasRaw)) ? Number(horasRaw) : 24;
+    if (horas === 0 || horas < -168 || horas > 168) {
+      res.status(400).json({ ok: false, error: 'Horas inválidas (rango permitido: -168 a 168)' });
+      return;
+    }
+    const apartado = prorrogarApartado(req.params.id, horas);
+    if (!apartado) { res.status(404).json({ ok: false, error: 'Apartado no encontrado' }); return; }
+    res.json({ ok: true, data: apartado });
   } catch (err) { next(err); }
 });
 

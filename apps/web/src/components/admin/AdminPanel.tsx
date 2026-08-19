@@ -6,7 +6,7 @@
  */
 import { useState, useMemo } from 'react';
 import { Key, Users, Copy, Check, Trash2, AlertCircle, Loader2,
-         Package, Clock, CheckCircle, XCircle, LayoutGrid,
+         Package, Clock, CheckCircle, XCircle, LayoutGrid, TimerReset,
          ShieldCheck, UserPlus, Ban, RotateCcw, Eye, EyeOff,
          ArrowLeft, ChevronRight, Expand, Pencil, X, ShieldOff } from 'lucide-react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
@@ -208,6 +208,16 @@ function TabApartados({ onLoteClick }: { onLoteClick: (loteId: string) => void }
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-apartados'] }),
   });
 
+  const prorrogar = useMutation({
+    mutationFn: async ({ id, horas }: { id: string; horas: number }) => {
+      const res = await fetch(`${BASE}/admin/apartados/${id}/prorrogar`, {
+        method: 'POST', headers: adminHeaders(), body: JSON.stringify({ horas }),
+      });
+      if (!res.ok) { const json = await res.json().catch(() => null); throw new Error(json?.error ?? 'Error prorrogando'); }
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-apartados'] }),
+  });
+
   return (
     <div className="space-y-4">
       <div className="flex items-center gap-2">
@@ -338,6 +348,29 @@ function TabApartados({ onLoteClick }: { onLoteClick: (loteId: string) => void }
 
                   {!a.expirado && (
                     <div className="flex gap-2">
+                      <div className="relative">
+                        <select
+                          disabled={prorrogar.isPending}
+                          value=""
+                          onChange={(e) => {
+                            const horas = Number(e.target.value);
+                            if (horas) prorrogar.mutate({ id: a.id, horas });
+                            e.target.value = '';
+                          }}
+                          title="Prorrogar apartado"
+                          className="appearance-none flex items-center gap-1.5 pl-7 pr-6 py-1.5 text-xs border border-stone-200
+                                     rounded-md hover:border-amber-300 hover:text-amber-700 transition disabled:opacity-50
+                                     bg-white cursor-pointer focus:outline-none focus:ring-2 focus:ring-amber-200">
+                          <option value="" disabled>Prorrogar…</option>
+                          <option value="6">+6 horas</option>
+                          <option value="12">+12 horas</option>
+                          <option value="24">+24 horas</option>
+                          <option value="48">+48 horas</option>
+                          <option value="72">+72 horas</option>
+                          <option value="168">+7 días</option>
+                        </select>
+                        <TimerReset size={12} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-stone-400" />
+                      </div>
                       <button onClick={() => liberar.mutate(a.id)} disabled={liberar.isPending}
                         className="flex items-center gap-1.5 px-3 py-1.5 text-xs border border-stone-200
                                    rounded-md hover:border-red-300 hover:text-red-600 transition disabled:opacity-50">
