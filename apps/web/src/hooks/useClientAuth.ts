@@ -83,3 +83,11 @@ export function useClientLogout() {
     sessionStorage.removeItem(CLIENT_STORAGE_KEY);
   };
 }
+
+/**
+ * Igual que useClientLogout() pero sin ser un hook — se usa fuera de
+ * React (ej. en el manejador global de sesión expirada en main.tsx).
+ */
+export function clearStoredClient() {
+  sessionStorage.removeItem(CLIENT_STORAGE_KEY);
+}

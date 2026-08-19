@@ -195,7 +195,7 @@ function TabApartados({ onLoteClick }: { onLoteClick: (loteId: string) => void }
   const liberar = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`${BASE}/admin/apartados/${id}`, { method: 'DELETE', headers: adminHeaders() });
-      if (!res.ok) throw new Error('Error liberando');
+      if (!res.ok) { const json = await res.json().catch(() => null); throw new Error(json?.error ?? 'Error liberando'); }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-apartados'] }),
   });
@@ -203,7 +203,7 @@ function TabApartados({ onLoteClick }: { onLoteClick: (loteId: string) => void }
   const confirmar = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`${BASE}/admin/apartados/${id}/confirmar`, { method: 'POST', headers: adminHeaders() });
-      if (!res.ok) throw new Error('Error confirmando');
+      if (!res.ok) { const json = await res.json().catch(() => null); throw new Error(json?.error ?? 'Error confirmando'); }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['admin-apartados'] }),
   });

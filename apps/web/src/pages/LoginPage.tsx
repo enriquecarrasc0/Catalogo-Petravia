@@ -4,7 +4,7 @@
  * Pantalla de entrada unificada: selector → vendedor | cliente
  */
 import { useState } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, useSearchParams, Navigate } from 'react-router-dom';
 import { useQueryClient } from '@tanstack/react-query';
 import { ShieldCheck, User, Eye, EyeOff, AlertCircle, ArrowLeft } from 'lucide-react';
 import { useClientLogin, useSaveClient, useCurrentClient } from '@/hooks/useClientAuth';
@@ -23,6 +23,8 @@ export default function LoginPage() {
   const saveClient = useSaveClient();
   const { mutate: loginCliente, isPending, error: errorCliente } = useClientLogin();
   const { forzarEspanol, restaurarLocaleCliente } = useI18n();
+  const [searchParams] = useSearchParams();
+  const sesionExpirada = searchParams.get('expirada') === '1';
 
   const [vista,       setVista]       = useState<Vista>('selector');
   const [showPass,    setShowPass]    = useState(false);
@@ -64,7 +66,7 @@ export default function LoginPage() {
       // Como este cambio de pantalla es una navegación SPA (sin recargar
       // la página), hay que forzarlo explícitamente aquí.
       forzarEspanol();
-      navigate('/vendedor');
+      navigate('/vendedor', { state: { bienvenida: json.nombre } });
     } catch {
       setErrorVendedor('No se pudo conectar con el servidor');
     } finally {
@@ -106,6 +108,13 @@ export default function LoginPage() {
           Petravia
         </span>
       </a>
+
+      {sesionExpirada && (
+        <div className="w-full max-w-sm mb-4 flex items-center gap-2 p-3 bg-amber-50 border border-amber-100 rounded-md">
+          <AlertCircle size={14} className="text-amber-500 shrink-0" />
+          <p className="text-xs text-amber-700">Tu sesión anterior expiró. Vuelve a iniciar sesión para continuar.</p>
+        </div>
+      )}
 
       <div className="bg-white border border-stone-200 rounded-xl shadow-sm w-full max-w-sm overflow-hidden">
 

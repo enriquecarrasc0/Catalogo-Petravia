@@ -184,7 +184,7 @@ function TabApartados({ onLoteClick }: { onLoteClick: (loteId: string) => void }
   const liberar = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`${BASE}/vendedor/apartados/${id}`, { method: 'DELETE', headers: vendedorHeaders() });
-      if (!res.ok) throw new Error('Error liberando');
+      if (!res.ok) { const json = await res.json().catch(() => null); throw new Error(json?.error ?? 'Error liberando'); }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendedor-apartados'] }),
   });
@@ -192,7 +192,7 @@ function TabApartados({ onLoteClick }: { onLoteClick: (loteId: string) => void }
   const confirmar = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`${BASE}/vendedor/apartados/${id}/confirmar`, { method: 'POST', headers: vendedorHeaders() });
-      if (!res.ok) throw new Error('Error confirmando');
+      if (!res.ok) { const json = await res.json().catch(() => null); throw new Error(json?.error ?? 'Error confirmando'); }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendedor-apartados'] }),
   });
@@ -409,7 +409,7 @@ function TabClientes() {
   const desactivar = useMutation({
     mutationFn: async (id: string) => {
       const res = await fetch(`${BASE}/auth/tokens/${id}`, { method: 'DELETE', headers: vendedorHeaders() });
-      if (!res.ok) throw new Error('Error desactivando');
+      if (!res.ok) { const json = await res.json().catch(() => null); throw new Error(json?.error ?? 'Error desactivando'); }
     },
     onSuccess: () => qc.invalidateQueries({ queryKey: ['vendedor-tokens'] }),
   });
