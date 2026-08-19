@@ -1,9 +1,19 @@
+import { useState } from 'react';
 import { Outlet, Link, useNavigate } from 'react-router-dom';
 import { LayoutDashboard, LogOut } from 'lucide-react';
 import { clearVendedorSession, getVendedorSession } from '@/lib/vendedorSession';
 import { useCurrentClient, useClientLogout } from '@/hooks/useClientAuth';
 import { useT } from '@/i18n/I18nContext';
 import LanguageSwitcher from './LanguageSwitcher';
+import OnboardingTour from '@/components/onboarding/OnboardingTour';
+
+/** Llave de localStorage para recordar que ESTE cliente (por su token)
+ * ya vio el recorrido de bienvenida, para no repetírselo en su
+ * próxima visita ni imponérselo a otro cliente que use el mismo
+ * dispositivo (mismo criterio que la preferencia de idioma). */
+function llaveOnboardingVisto(token: string): string {
+  return `petravia_onboarding_visto:${token}`;
+}
 
 export default function Layout() {
   const navigate     = useNavigate();
@@ -11,6 +21,19 @@ export default function Layout() {
   const logout       = useClientLogout();
   const esVendedor   = Boolean(getVendedorSession());
   const t            = useT();
+
+  const [mostrarOnboarding, setMostrarOnboarding] = useState(() => {
+    if (!cliente) return false;
+    try { return localStorage.getItem(llaveOnboardingVisto(cliente.token)) !== '1'; }
+    catch { return false; }
+  });
+
+  function cerrarOnboarding() {
+    setMostrarOnboarding(false);
+    if (cliente) {
+      try { localStorage.setItem(llaveOnboardingVisto(cliente.token), '1'); } catch { /* ignorar */ }
+    }
+  }
 
   function handleLogout() {
     if (esVendedor) {
@@ -23,6 +46,8 @@ export default function Layout() {
 
   return (
     <div className="min-h-screen flex flex-col app-background">
+      {mostrarOnboarding && <OnboardingTour onClose={cerrarOnboarding} />}
+
       <header
         className="sticky top-0 z-40 backdrop-blur-sm"
         style={{ background: 'rgba(255,255,255,0.9)', borderBottom: '1px solid var(--border)' }}
