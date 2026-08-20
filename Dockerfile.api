@@ -25,7 +25,12 @@ RUN sed -i '/"ignoreDeprecations"/d' apps/api/tsconfig.json
 RUN sed -i '/"ignoreDeprecations"/d' packages/shared/tsconfig.json 2>/dev/null || true
 
 # Compilar TypeScript
-RUN npx tsc -p packages/shared/tsconfig.json 2>/dev/null || true
+# IMPORTANTE: si "packages/shared" no compila, apps/api NO puede continuar —
+# antes aquí se ocultaba el error real (2>/dev/null || true) y el build
+# fallaba más adelante con errores confusos de "Cannot find module
+# '@petravia/shared'" en apps/api, que no señalaban el problema verdadero.
+RUN npx tsc -p packages/shared/tsconfig.json
+RUN test -f packages/shared/dist/index.d.ts || (echo "❌ packages/shared no generó dist/index.d.ts — revisa el error de tsc arriba." && exit 1)
 RUN npx tsc -p apps/api/tsconfig.json
 
 # ── Stage 2: producción ────────────────────────────────────────
