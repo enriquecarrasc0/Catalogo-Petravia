@@ -17,7 +17,7 @@ function ProtectedCatalogo({ children }: { children: JSX.Element }) {
 
 export default function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter basename="/catalogo">
       <Routes>
         <Route path="/login" element={<LoginPage />} />
 

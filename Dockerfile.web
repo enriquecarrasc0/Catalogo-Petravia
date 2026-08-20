@@ -14,6 +14,14 @@ RUN npm ci --ignore-scripts
 COPY packages/shared/ ./packages/shared/
 COPY apps/web/ ./apps/web/
 
+# IMPORTANTE: apps/web importa funciones reales de @petravia/shared
+# (formatSaldoLote, formatM2, GRUPOS_MATERIALES, etc. — no solo tipos), así
+# que Vite necesita el paquete ya compilado en packages/shared/dist antes de
+# armar el bundle. Sin este paso, el build fallaba (o silenciosamente
+# empaquetaba un import roto) porque dist/ nunca llegaba a existir.
+RUN npx tsc -p packages/shared/tsconfig.json
+RUN test -f packages/shared/dist/index.js || (echo "❌ packages/shared no generó dist/index.js — revisa el error de tsc arriba." && exit 1)
+
 RUN sed -i '/"ignoreDeprecations"/d; /"noUnusedLocals"/d; /"noUnusedParameters"/d' apps/web/tsconfig.json
 RUN sed -i 's/"build": "tsc && vite build"/"build": "vite build"/' apps/web/package.json
 
