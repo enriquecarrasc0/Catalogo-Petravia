@@ -111,7 +111,7 @@ function FiltrosBoton({
       </button>
 
       {open && (
-        <div className="absolute top-full right-0 sm:left-0 mt-2 z-50 w-[280px] p-4"
+        <div className="absolute top-full left-0 mt-2 z-50 w-[280px] max-w-[calc(100vw-2rem)] p-4"
           style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: '8px', boxShadow: '0 8px 24px rgba(0,0,0,0.12)' }}>
 
           {/* Estado — solo admin/vendedor. Los clientes SIEMPRE ven solo
