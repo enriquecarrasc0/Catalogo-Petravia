@@ -10,6 +10,8 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import CatalogoPage from '@/pages/CatalogoPage';
 import LoteDetalleInline from './LoteDetalleInline';
 import { getVendedorSession } from '@/lib/vendedorSession';
+import { useVendedorLogout } from '@/hooks/useVendedorLogout';
+import AppNavShell from '@/components/layout/AppNavShell';
 import { formatSaldoLote, type TipoLote } from '@petravia/shared';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
@@ -83,6 +85,8 @@ function CopyButton({ text }: { text: string }) {
 export default function VendedorPanel() {
   const [tab, setTab] = useState<Tab>('apartados');
   const [loteSeleccionado, setLoteSeleccionado] = useState<string | null>(null);
+  const logout = useVendedorLogout();
+  const nombre = getVendedorSession()?.nombre ?? 'Vendedor';
 
   function cambiarTab(id: Tab) {
     setTab(id);
@@ -90,27 +94,17 @@ export default function VendedorPanel() {
   }
 
   return (
-    <div>
-      {/* Tabs — siempre visibles, sin importar si hay un lote abierto */}
-      <div className="max-w-6xl mx-auto px-4 sm:px-6 pt-6">
-        <div className="flex gap-1 mb-6 border-b border-stone-200 overflow-x-auto -mx-4 px-4 sm:mx-0 sm:px-0 scrollbar-none">
-          {([
-            { id: 'apartados', label: 'Apartados',  Icon: Package },
-            { id: 'clientes',  label: 'Clientes',    Icon: Key },
-            { id: 'catalogo',  label: 'Catálogo',   Icon: LayoutGrid },
-          ] as const).map(({ id, label, Icon }) => (
-            <button key={id} onClick={() => cambiarTab(id)}
-              className={`flex items-center gap-2 px-3 sm:px-4 py-2.5 text-sm transition-colors border-b-2 -mb-px shrink-0 whitespace-nowrap
-                ${tab === id
-                  ? 'border-stone-900 text-stone-900 font-medium'
-                  : 'border-transparent text-stone-400 hover:text-stone-700'}`}>
-              <Icon size={14} />{label}
-            </button>
-          ))}
-        </div>
-      </div>
-
-      {/* Contenido */}
+    <AppNavShell
+      items={[
+        { id: 'apartados', label: 'Apartados', Icon: Package },
+        { id: 'clientes',  label: 'Clientes',   Icon: Key },
+        { id: 'catalogo',  label: 'Catálogo',  Icon: LayoutGrid },
+      ]}
+      activeId={tab}
+      onSelect={(id) => cambiarTab(id as Tab)}
+      nombre={nombre}
+      onLogout={logout}
+    >
       {loteSeleccionado ? (
         // Vista preliminar del lote — accesible desde cualquier pestaña (Apartados o Catálogo)
         <LoteDetalleInline
@@ -121,12 +115,12 @@ export default function VendedorPanel() {
         // Sin max-w-6xl: el catálogo usa su propio max-w-7xl a ancho completo
         <CatalogoPage onLoteClick={setLoteSeleccionado} />
       ) : (
-        <div className="max-w-6xl mx-auto px-6 pb-6">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 py-6">
           {tab === 'apartados'  && <TabApartados onLoteClick={setLoteSeleccionado} />}
           {tab === 'clientes'   && <TabClientes />}
         </div>
       )}
-    </div>
+    </AppNavShell>
   );
 }
 

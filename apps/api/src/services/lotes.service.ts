@@ -7,7 +7,7 @@
 import { executeKw } from '../db/odoo.js';
 import db from '../db/index.js';
 import type { Lote, Foto, Pieza, PaginatedResponse, FiltrosCatalogo } from '@petravia/shared';
-import { esUbicacionVisibleParaCliente } from '../config/ubicacionesCliente.js';
+import { esUbicacionVisibleParaCliente, etiquetaUbicacion } from '../config/ubicacionesCliente.js';
 
 // ─── Re-exportar grupoMaterial y ordenLote inline (sin @petravia/shared en runtime) ─
 
@@ -128,7 +128,7 @@ const fotoUrlHd    = (id: number) => `/api/imagenes/stock.lot.image/${id}/image_
 
 // ─── Estado local (apartados en SQLite) ──────────────────────
 
-interface EstadoLocal { estado: 'apartado' | 'vendido'; clienteNombre?: string; }
+interface EstadoLocal { estado: 'apartado' | 'vendido'; clienteNombre?: string; vendedorId?: string; }
 
 // ─── Renombrado manual (grupo/acabado) — overlay en SQLite ────
 
@@ -190,12 +190,12 @@ function getEstadosLocales(): Map<string, EstadoLocal> {
 
     // Apartados vigentes (no sobreescriben una venta ya confirmada)
     const apartados = db.prepare(`
-      SELECT lote_id, cliente_nombre FROM apartados
+      SELECT lote_id, cliente_nombre, vendedor_id FROM apartados
       WHERE expira_en > datetime('now')
-    `).all() as Array<{ lote_id: string; cliente_nombre: string }>;
+    `).all() as Array<{ lote_id: string; cliente_nombre: string; vendedor_id: string | null }>;
     for (const a of apartados) {
       if (!map.has(a.lote_id)) {
-        map.set(a.lote_id, { estado: 'apartado', clienteNombre: a.cliente_nombre });
+        map.set(a.lote_id, { estado: 'apartado', clienteNombre: a.cliente_nombre, vendedorId: a.vendedor_id ?? undefined });
       }
     }
   } catch {
@@ -381,6 +381,15 @@ async function getOdooData(): Promise<OdooDataCache> {
 // ─── getAllLotes — mezcla Odoo + estados locales ──────────────
 
 export async function getAllLotes(): Promise<Lote[]> {
+  const { lotes } = await getAllLotesConEstados();
+  return lotes;
+}
+
+/** Igual que getAllLotes(), pero también devuelve el mapa de estados
+ * locales (apartado/vendido + quién lo apartó) — lo necesita `filtrar()`
+ * para la excepción de "el vendedor puede ver su propio apartado aunque
+ * esté en una ubicación no visible para él". */
+async function getAllLotesConEstados(): Promise<{ lotes: Lote[]; estadosLocales: Map<string, EstadoLocal> }> {
   const { lotes: rawLotes, fotos: fotosMap, ubicaciones } = await getOdooData();
   const estadosLocales = getEstadosLocales();
   const overridesLocales = getOverridesLocales();
@@ -394,7 +403,7 @@ export async function getAllLotes(): Promise<Lote[]> {
   });
 
   lotes.sort(ordenLote);
-  return lotes;
+  return { lotes, estadosLocales };
 }
 
 // ─── Filtrado ─────────────────────────────────────────────────
@@ -404,21 +413,34 @@ export type ListParams = Partial<FiltrosCatalogo> & {
   pageSize?: number;
   /**
    * true → solo lotes cuya ubicación esté en la lista de rutas visibles
-   * al cliente (ver config/ubicacionesCliente.ts). Vendedor/admin no
-   * deben mandar este flag en true, así ven el inventario completo.
+   * (ver config/ubicacionesCliente.ts). Se manda en true para clientes
+   * y para vendedores normales; solo el admin ve el inventario completo
+   * sin este filtro.
    */
   soloRutasPermitidas?: boolean;
+  /** Vendedor de la sesión actual (si la hay) — permite la excepción de
+   * "puedo ver mi propio apartado aunque esté en una ubicación que de
+   * otro modo no vería". No aplica a clientes. */
+  vendedorIdSesion?: string | null;
 };
 
-function filtrar(lotes: Lote[], params: ListParams): Lote[] {
-  const { grupos = [], acabados = [], estado = 'todos', tipo = 'todos', busqueda = '', soloConFoto = false, soloRutasPermitidas = false } = params;
+function filtrar(lotes: Lote[], params: ListParams, estadosLocales: Map<string, EstadoLocal>): Lote[] {
+  const { grupos = [], acabados = [], estado = 'todos', tipo = 'todos', busqueda = '', soloConFoto = false,
+          soloRutasPermitidas = false, vendedorIdSesion = null } = params;
   return lotes.filter(l => {
     if (grupos.length   && !grupos.includes(l.grupo))   return false;
     if (acabados.length && !acabados.includes(l.acabado as any)) return false;
     if (estado !== 'todos' && l.estado !== estado)       return false;
     if (tipo !== 'todos' && l.tipo !== tipo)             return false;
     if (soloConFoto && l.fotos.length === 0)             return false;
-    if (soloRutasPermitidas && !esUbicacionVisibleParaCliente(l.ubicacion, l.tipo)) return false;
+    if (soloRutasPermitidas && !esUbicacionVisibleParaCliente(l.ubicacion, l.tipo)) {
+      // Excepción: si el lote está apartado por el vendedor de esta
+      // sesión, lo puede ver de todos modos (para darle seguimiento a
+      // su propia reserva), aunque esté en una ubicación que
+      // normalmente no vería.
+      const esApartadoPropio = vendedorIdSesion && estadosLocales.get(l.id)?.vendedorId === vendedorIdSesion;
+      if (!esApartadoPropio) return false;
+    }
     if (busqueda.trim()) {
       const q = busqueda.trim().toLowerCase();
       if (!l.id.toLowerCase().includes(q) && !l.material.toLowerCase().includes(q)) return false;
@@ -427,17 +449,35 @@ function filtrar(lotes: Lote[], params: ListParams): Lote[] {
   });
 }
 
+/** Aplica el nombre amigable de ubicación (Puebla/Veracruz) — siempre al
+ * final, después de filtrar, para no afectar la lógica de visibilidad
+ * (que necesita el código crudo). */
+function conUbicacionAmigable(lote: Lote): Lote {
+  return { ...lote, ubicacion: etiquetaUbicacion(lote.ubicacion) };
+}
+
 export async function listLotes(params: ListParams = {}): Promise<PaginatedResponse<Lote>> {
   const { page = 1, pageSize = 24 } = params;
-  const todos     = await getAllLotes();
-  const filtrados = filtrar(todos, params);
-  const items     = filtrados.slice((page - 1) * pageSize, page * pageSize);
+  const { lotes: todos, estadosLocales } = await getAllLotesConEstados();
+  const filtrados = filtrar(todos, params, estadosLocales);
+  const items = filtrados.slice((page - 1) * pageSize, page * pageSize).map(conUbicacionAmigable);
   return { items, total: filtrados.length, page, pageSize, totalPages: Math.ceil(filtrados.length / pageSize) };
 }
 
 export async function getLote(id: string): Promise<Lote | null> {
-  const todos = await getAllLotes();
-  return todos.find(l => l.id === id) ?? null;
+  const { lotes: todos } = await getAllLotesConEstados();
+  const lote = todos.find(l => l.id === id);
+  return lote ? conUbicacionAmigable(lote) : null;
+}
+
+/** ¿Este lote está apartado, ahora mismo, por este vendedor? — para la
+ * excepción de "puedo ver mi propio apartado aunque esté en una
+ * ubicación que normalmente no vería". */
+export function esLoteApartadoPorVendedor(loteId: string, vendedorId: string): boolean {
+  const row = db.prepare(`
+    SELECT 1 FROM apartados WHERE lote_id = ? AND vendedor_id = ? AND expira_en > datetime('now')
+  `).get(loteId, vendedorId);
+  return Boolean(row);
 }
 
 export { esUbicacionVisibleParaCliente };

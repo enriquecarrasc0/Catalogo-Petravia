@@ -2,9 +2,10 @@
  * apps/api/src/config/ubicacionesCliente.ts
  * ──────────────────────────────────────────
  * Ubicaciones de inventario ("rutas") de Odoo cuyos lotes SÍ pueden
- * mostrarse como disponibles en el catálogo público (clientes).
+ * mostrarse como disponibles en el catálogo — a clientes y a vendedores
+ * normales por igual.
  *
- * Vendedores y admin no se filtran por esta lista: siempre ven el
+ * El admin es el único que no se filtra por esta lista: siempre ve el
  * inventario completo, sin importar la ubicación.
  *
  * Odoo renombró las ubicaciones y ahora el criterio de visibilidad
@@ -55,4 +56,34 @@ export function esUbicacionVisibleParaCliente(ubicacion?: string | null, tipo?: 
   }
   // Lámina, Formato, o tipo desconocido.
   return nombre.includes('alm');
+}
+
+/**
+ * Nombre "amigable" de la ubicación para mostrar en el catálogo (a
+ * cliente, vendedor o admin) en vez del código crudo de Odoo: el
+ * almacén cuyo código termina en "1" es Puebla, el que termina en "2"
+ * es Veracruz — ej. "TMM1/Existencias" → "Puebla", "XTM2/Formato alm"
+ * → "Veracruz".
+ *
+ * IMPORTANTE: esto es solo para mostrar — la visibilidad por ubicación
+ * (`esUbicacionVisibleParaCliente` arriba) debe seguir evaluándose
+ * sobre el valor CRUDO (antes de esta función), porque depende del
+ * sufijo del código ("existencias"/"alm"), no del nombre amigable.
+ *
+ * Si el código no termina en "1" ni "2" (otro almacén futuro, o un
+ * dato inesperado), se deja el valor original tal cual — mejor mostrar
+ * el dato crudo que inventar una región incorrecta.
+ */
+export function etiquetaUbicacion(ubicacion?: string | null): string {
+  if (!ubicacion) return '';
+  const partes = ubicacion.split('/').map(p => p.trim()).filter(Boolean);
+  // El código de almacén (TMM1, XTM2, etc.) es el PENÚLTIMO segmento del
+  // path — el último suele ser "Existencias" / "Formato alm" / etc. Así
+  // funciona igual si Odoo manda solo "TMM1/Existencias" o la ruta
+  // completa "WH/Stock/TMM1/Existencias". Si solo hay un segmento, se
+  // usa ese mismo como código.
+  const codigo = partes.length >= 2 ? partes[partes.length - 2] : (partes[0] ?? '');
+  if (/1$/.test(codigo)) return 'Puebla';
+  if (/2$/.test(codigo)) return 'Veracruz';
+  return ubicacion;
 }

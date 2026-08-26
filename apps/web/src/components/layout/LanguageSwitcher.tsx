@@ -7,7 +7,7 @@ import { Globe, Check } from 'lucide-react';
 import { useI18n } from '@/i18n/I18nContext';
 import { LOCALES } from '@/i18n/dictionary';
 
-export default function LanguageSwitcher() {
+export default function LanguageSwitcher({ variant = 'light' }: { variant?: 'light' | 'dark' }) {
   const { locale, setLocale, t } = useI18n();
   const [open, setOpen] = useState(false);
   const ref = useRef<HTMLDivElement>(null);
@@ -21,6 +21,8 @@ export default function LanguageSwitcher() {
   }, []);
 
   const actual = LOCALES.find(l => l.code === locale) ?? LOCALES[0];
+  const colorReposo = variant === 'dark' ? '#c9a468' : 'var(--muted)';
+  const colorHover  = variant === 'dark' ? '#f5f2ec' : 'var(--gold-dark)';
 
   return (
     <div ref={ref} className="relative">
@@ -28,9 +30,9 @@ export default function LanguageSwitcher() {
         onClick={() => setOpen(o => !o)}
         title={t('layout.language')}
         className="flex items-center gap-1.5 text-sm transition-colors"
-        style={{ color: 'var(--muted)' }}
-        onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold-dark)')}
-        onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+        style={{ color: colorReposo }}
+        onMouseEnter={e => (e.currentTarget.style.color = colorHover)}
+        onMouseLeave={e => (e.currentTarget.style.color = colorReposo)}
       >
         <Globe size={14} />
         {actual.code.toUpperCase()}

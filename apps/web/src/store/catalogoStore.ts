@@ -51,7 +51,21 @@ export const useCatalogoStore = create<CatalogoState>()(
       },
 
       setTipo(tipo) {
-        set((s) => ({ filtros: { ...s.filtros, tipo } }));
+        set((s) => ({
+          filtros: {
+            ...s.filtros,
+            tipo,
+            // Bloques no tiene filtro de Acabado (es material en bruto,
+            // sin acabado superficial) — si venías de Láminas/Formato con
+            // uno o más acabados marcados, se quedaban "pegados" en el
+            // fondo aunque la interfaz ya no los mostrara, y la búsqueda
+            // no encontraba nada porque ningún bloque calza con un
+            // acabado que no aplica. Se limpian solo al entrar a Bloques;
+            // si vas de Láminas a Formato (o viceversa) se conservan,
+            // porque ahí sí tiene sentido mantenerlos.
+            acabados: tipo === 'bloque' ? [] : s.filtros.acabados,
+          },
+        }));
       },
 
       setBusqueda(q) {

@@ -49,40 +49,34 @@ export default function Layout() {
       {mostrarOnboarding && <OnboardingTour onClose={cerrarOnboarding} />}
 
       <header
-        className="sticky top-0 z-40 backdrop-blur-sm"
-        style={{ background: 'rgba(255,255,255,0.9)', borderBottom: '1px solid var(--border)' }}
+        className="sticky top-0 z-40"
+        style={{ background: 'var(--gold-dark)' }}
       >
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-24 flex items-center justify-between">
-          <Link to={cliente ? '/seleccion' : '/catalogo'} className="flex flex-col items-center gap-1.5">
-            <img src="/brand/isotipo-beige.png" alt="" className="h-11 w-auto" />
-            <span
-              className="font-display uppercase leading-none"
-              style={{ fontSize: '13px', letterSpacing: '0.38em', color: 'var(--beige-dark)', paddingLeft: '0.38em' }}
-            >
-              Petravia
-            </span>
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <Link to={cliente ? '/seleccion' : '/catalogo'} className="flex items-center">
+            <img src="/brand/isotipo-beige.png" alt="Petravia" className="h-10 w-auto" />
           </Link>
 
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-5">
             {esVendedor && (
               <Link to="/vendedor"
                 className="flex items-center gap-1.5 text-sm transition-colors"
-                style={{ color: 'var(--muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold-dark)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+                style={{ color: '#c9a468' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#f5f2ec')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#c9a468')}
               >
                 <LayoutDashboard size={14} />
                 {t('layout.sellerPanel')}
               </Link>
             )}
             {/* Selector de idioma — solo para clientes */}
-            {cliente && <LanguageSwitcher />}
+            {cliente && <LanguageSwitcher variant="dark" />}
             {(esVendedor || cliente) && (
               <button onClick={handleLogout}
                 className="flex items-center gap-1.5 text-sm transition-colors"
-                style={{ color: 'var(--muted)' }}
-                onMouseEnter={e => (e.currentTarget.style.color = 'var(--gold-dark)')}
-                onMouseLeave={e => (e.currentTarget.style.color = 'var(--muted)')}
+                style={{ color: '#c9a468' }}
+                onMouseEnter={e => (e.currentTarget.style.color = '#f5f2ec')}
+                onMouseLeave={e => (e.currentTarget.style.color = '#c9a468')}
               >
                 <LogOut size={14} />
                 {t('layout.signOut')}

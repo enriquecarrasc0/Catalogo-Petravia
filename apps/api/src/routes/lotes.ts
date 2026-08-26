@@ -1,22 +1,26 @@
 import { Router } from 'express';
-import { listLotes, getLote, esUbicacionVisibleParaCliente, setLoteOverride } from '../services/lotes.service.js';
+import { listLotes, getLote, esUbicacionVisibleParaCliente, esLoteApartadoPorVendedor, setLoteOverride } from '../services/lotes.service.js';
 import { apartarLote } from '../services/apartados.service.js';
 import { buscarLotes, obtenerMateriales, obtenerGrupos } from '../services/busqueda.service.js';
 import { generarZipFotosLotes, construirNombreArchivoZip } from '../services/fotosZip.service.js';
 import { authClient, authVendedor, isVendedorRequest, type AuthenticatedRequest, type VendedorRequest } from '../middleware/authClient.js';
+import { esVendedorAdmin } from '../services/vendedorAuth.service.js';
 import type { GrupoMaterial, Acabado, EstadoLote, TipoLote } from '@petravia/shared';
 
 export const lotesRouter = Router();
 
 // GET /api/lotes — lista con filtros
-// Clientes (sin Basic Auth de admin): solo ven lotes "disponible"
+// Clientes y vendedores normales: solo ven lotes "disponible" en
+// ubicaciones ya listas para catálogo. Solo el admin ve todo.
 lotesRouter.get('/', async (req, res, next) => {
   try {
-    const esAdmin = Boolean(isVendedorRequest(req));
+    const vendedorIdSesion = isVendedorRequest(req);
+    const esAdmin = Boolean(vendedorIdSesion) && esVendedorAdmin(vendedorIdSesion!);
+    const esVendedorNormal = Boolean(vendedorIdSesion) && !esAdmin;
     const { grupos, acabados, estado, tipo, busqueda, soloConFoto, page, pageSize } = req.query;
 
     let estadoFinal: EstadoLote | 'todos' = (estado as EstadoLote | 'todos') ?? 'todos';
-    if (!esAdmin) {
+    if (!esAdmin && !esVendedorNormal) {
       // Clientes no pueden ver apartados/vendidos bajo ninguna circunstancia
       estadoFinal = 'disponible';
     }
@@ -28,9 +32,12 @@ lotesRouter.get('/', async (req, res, next) => {
       tipo:        (tipo as TipoLote | 'todos') ?? 'todos',
       busqueda:    (busqueda as string) ?? '',
       soloConFoto: soloConFoto === 'true',
-      // Clientes solo ven lotes de las ubicaciones/rutas permitidas.
-      // Vendedor/admin ven el inventario completo, sin este filtro.
+      // Clientes y vendedores normales solo ven lotes de las
+      // ubicaciones/rutas permitidas (con la excepción de sus propios
+      // apartados, ver `filtrar()`). Solo el admin ve el inventario
+      // completo, sin este filtro.
       soloRutasPermitidas: !esAdmin,
+      vendedorIdSesion,
       page:        page     ? parseInt(page as string)     : 1,
       pageSize:    pageSize ? parseInt(pageSize as string) : 24,
     });
@@ -94,11 +101,21 @@ lotesRouter.get('/filtros/grupos', async (_req, res, next) => {
 // GET /api/lotes/:id
 lotesRouter.get('/:id', async (req, res, next) => {
   try {
-    const esAdmin = Boolean(isVendedorRequest(req));
-    const lote = await getLote(decodeURIComponent(req.params.id));
+    const vendedorIdSesion = isVendedorRequest(req);
+    const esAdmin = Boolean(vendedorIdSesion) && esVendedorAdmin(vendedorIdSesion!);
+    const loteId = decodeURIComponent(req.params.id);
+    const lote = await getLote(loteId);
     if (!lote) { res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return; }
-    if (!esAdmin && (lote.estado !== 'disponible' || !esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo))) {
-      res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return;
+
+    if (!esAdmin) {
+      // Excepción: un vendedor normal (o cliente, aunque un cliente
+      // nunca aparta directo, siempre vía apartar-vendedor) puede ver
+      // el detalle de un lote que él mismo apartó, aunque esté en una
+      // ubicación que de otro modo no vería.
+      const esApartadoPropio = vendedorIdSesion && esLoteApartadoPorVendedor(loteId, vendedorIdSesion);
+      if (!esApartadoPropio && (lote.estado !== 'disponible' || !esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo))) {
+        res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return;
+      }
     }
     res.json({ ok: true, data: lote });
   } catch (err) { next(err); }
@@ -136,10 +153,17 @@ lotesRouter.post('/:id/apartar', authClient, async (req: AuthenticatedRequest, r
   } catch (err) { next(err); }
 });
 
-// POST /api/lotes/:id/apartar-vendedor — el vendedor/admin aparta un lote
-// a nombre de uno de sus clientes, con duración configurable (horas).
+// POST /api/lotes/:id/apartar-vendedor — el vendedor aparta un lote a
+// nombre de uno de sus clientes, con duración configurable (horas).
+// El admin NO puede usar esto: no tiene clientes propios (solo
+// supervisa/gestiona a los vendedores), así que apartar a nombre de un
+// cliente no le corresponde a esa cuenta.
 lotesRouter.post('/:id/apartar-vendedor', authVendedor, async (req: VendedorRequest, res, next) => {
   try {
+    if (esVendedorAdmin(req.vendedorId!)) {
+      res.status(403).json({ ok: false, error: 'La cuenta de administrador no aparta lotes a nombre de clientes — esa acción es solo para vendedores' });
+      return;
+    }
     const { clienteEmail, clienteNombre, horas } = req.body as {
       clienteEmail?: string; clienteNombre?: string; horas?: number;
     };

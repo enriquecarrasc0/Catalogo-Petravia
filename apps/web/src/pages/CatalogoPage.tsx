@@ -154,73 +154,81 @@ export default function CatalogoPage({ onLoteClick }: Props) {
 
   return (
     <div className="max-w-[1680px] mx-auto px-6 lg:px-10 py-10">
-      {/* Hero del catálogo */}
-      <div className="mb-10 pb-8" style={{ borderBottom: '1px solid var(--border)' }}>
-        <div className="flex items-start justify-between gap-6 flex-wrap">
-          <div>
-            <p
-              className="text-xs tracking-[0.25em] uppercase mb-2"
-              style={{ color: 'var(--gold-dark)' }}
-            >
-              {t('catalogo.eyebrow')}
+      {/* Hero del catálogo — tarjeta clara separada del fondo de página */}
+      <div
+        className="mb-10 p-6 sm:p-8 rounded-xl flex items-start justify-between gap-6 flex-wrap"
+        style={{ background: 'var(--sand)' }}
+      >
+        <div>
+          <p
+            className="text-xs tracking-[0.25em] uppercase mb-2"
+            style={{ color: 'var(--gold-dark)' }}
+          >
+            {t('catalogo.eyebrow')}
+          </p>
+          <h1
+            className="font-display font-light"
+            style={{ fontSize: '2.6rem', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-0.01em' }}
+          >
+            {TITULOS[filtros.tipo] ?? TITULOS.todos}
+          </h1>
+          {data && (
+            <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
+              {t('catalogo.totalLotes', { n: data.total })}
             </p>
-            <h1
-              className="font-display font-light"
-              style={{ fontSize: '2.6rem', color: 'var(--ink)', lineHeight: 1.15, letterSpacing: '-0.01em' }}
-            >
-              {TITULOS[filtros.tipo] ?? TITULOS.todos}
-            </h1>
-            {data && (
-              <p className="mt-2 text-sm" style={{ color: 'var(--muted)' }}>
-                {t('catalogo.totalLotes', { n: data.total })}
-              </p>
-            )}
-          </div>
-
-          {/* Acciones del cliente — Mis Apartados */}
-          {client && (
-            <div
-              className="flex items-center gap-1 p-1 shrink-0"
-              style={{ background: 'var(--white)', border: '1px solid var(--border)', borderRadius: '999px' }}
-            >
-              <button onClick={() => togglePanel('apartados')}
-                className="flex items-center gap-1.5 text-xs px-4 py-1.5 uppercase tracking-wider transition-all duration-200"
-                style={{
-                  borderRadius: '999px',
-                  background: panelCliente === 'apartados' ? 'var(--gold)' : 'transparent',
-                  color: panelCliente === 'apartados' ? 'white' : 'var(--muted)',
-                }}
-              >
-                <Package size={12} strokeWidth={1.75} />
-                {t('catalogo.misApartados')}
-                {apartados.length > 0 && (
-                  <span className="ml-0.5 px-1.5 rounded-full"
-                    style={{ background: panelCliente === 'apartados' ? 'rgba(255,255,255,0.3)' : 'var(--gold)', color: 'white', fontSize: '10px', lineHeight: '1.4' }}>
-                    {apartados.length}
-                  </span>
-                )}
-              </button>
-
-              <button onClick={() => togglePanel('favoritos')}
-                className="flex items-center gap-1.5 text-xs px-4 py-1.5 uppercase tracking-wider transition-all duration-200"
-                style={{
-                  borderRadius: '999px',
-                  background: panelCliente === 'favoritos' ? 'var(--gold)' : 'transparent',
-                  color: panelCliente === 'favoritos' ? 'white' : 'var(--muted)',
-                }}
-              >
-                <Heart size={12} strokeWidth={1.75} />
-                {t('panelCliente.favoritos')}
-                {favoritos.length > 0 && (
-                  <span className="ml-0.5 px-1.5 rounded-full"
-                    style={{ background: panelCliente === 'favoritos' ? 'rgba(255,255,255,0.3)' : 'var(--gold)', color: 'white', fontSize: '10px', lineHeight: '1.4' }}>
-                    {favoritos.length}
-                  </span>
-                )}
-              </button>
-            </div>
           )}
         </div>
+
+        {/* Acciones del cliente — Mis Apartados / Favoritos, como pills
+            delineadas con una insignia circular oscura para el contador
+            (en vez del grupo de pills relleno de antes). */}
+        {client && (
+          <div className="flex items-center gap-2 shrink-0">
+            <button onClick={() => togglePanel('apartados')}
+              className="flex items-center gap-2 text-xs px-4 py-2 uppercase tracking-wider transition-colors rounded-full"
+              style={{
+                border: `1px solid ${panelCliente === 'apartados' ? 'var(--ink)' : 'var(--border)'}`,
+                background: panelCliente === 'apartados' ? 'var(--ink)' : 'var(--white)',
+                color: panelCliente === 'apartados' ? 'white' : 'var(--muted)',
+              }}
+            >
+              <Package size={12} strokeWidth={1.75} />
+              {t('catalogo.misApartados')}
+              {apartados.length > 0 && (
+                <span className="flex items-center justify-center rounded-full"
+                  style={{
+                    width: '16px', height: '16px', fontSize: '10px',
+                    background: panelCliente === 'apartados' ? 'rgba(255,255,255,0.25)' : 'var(--ink)',
+                    color: 'white',
+                  }}>
+                  {apartados.length}
+                </span>
+              )}
+            </button>
+
+            <button onClick={() => togglePanel('favoritos')}
+              className="flex items-center gap-2 text-xs px-4 py-2 uppercase tracking-wider transition-colors rounded-full"
+              style={{
+                border: `1px solid ${panelCliente === 'favoritos' ? 'var(--ink)' : 'var(--border)'}`,
+                background: panelCliente === 'favoritos' ? 'var(--ink)' : 'var(--white)',
+                color: panelCliente === 'favoritos' ? 'white' : 'var(--muted)',
+              }}
+            >
+              <Heart size={12} strokeWidth={1.75} />
+              {t('panelCliente.favoritos')}
+              {favoritos.length > 0 && (
+                <span className="flex items-center justify-center rounded-full"
+                  style={{
+                    width: '16px', height: '16px', fontSize: '10px',
+                    background: panelCliente === 'favoritos' ? 'rgba(255,255,255,0.25)' : 'var(--ink)',
+                    color: 'white',
+                  }}>
+                  {favoritos.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Barra de búsqueda */}
@@ -239,13 +247,13 @@ export default function CatalogoPage({ onLoteClick }: Props) {
             onChange={(e) => { setBusqueda(e.target.value); setPage(1); }}
             className="w-full pl-9 pr-3 py-2 text-sm outline-none transition-all"
             style={{
-              background: 'var(--white)',
-              border: '1px solid var(--border)',
-              borderRadius: '2px',
+              background: 'var(--stone)',
+              border: '1px solid transparent',
+              borderRadius: '6px',
               color: 'var(--ink)',
             }}
             onFocus={e => (e.target.style.borderColor = 'var(--gold)')}
-            onBlur={e => (e.target.style.borderColor = 'var(--border)')}
+            onBlur={e => (e.target.style.borderColor = 'transparent')}
           />
         </div>
         {/* Switcher Catálogo / Por Material — Bloques no aplica: es un
