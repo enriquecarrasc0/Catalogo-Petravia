@@ -11,6 +11,10 @@ const ODOO_DB   = process.env.ODOO_DB   ?? 'rvargasnovu-petravia-prod-24989563';
 const ODOO_USER = process.env.ODOO_USER ?? 'enrique@petravia.mx';
 const ODOO_KEY  = process.env.ODOO_KEY  ?? '8418f4516fdde2de5b672c57ca16a38d37e28d4a';
 
+/** Cuánto esperamos, como máximo, una respuesta de Odoo antes de dar por
+ * perdida esa llamada — ver el porqué en `call()` más abajo. */
+const ODOO_TIMEOUT_MS = 25_000;
+
 
 // ─── Helpers XML-RPC ─────────────────────────────────────────
 // Los clientes se crean una sola vez y se reutilizan: evita repetir el
@@ -39,7 +43,26 @@ function getObjectClient(): xmlrpc.Client {
 
 function call<T>(client: xmlrpc.Client, method: string, params: unknown[]): Promise<T> {
   return new Promise((resolve, reject) => {
+    // Sin esto, si Odoo (o la red hacia Odoo) se queda sin responder, la
+    // promesa nunca se resuelve ni rechaza — se queda esperando PARA
+    // SIEMPRE. Y como getUid()/fetchOdooData() comparten esa misma
+    // promesa entre todas las peticiones concurrentes (para no bombardear
+    // a Odoo), UNA sola llamada colgada bloqueaba TODA la app detrás de
+    // ella, indefinidamente — el proceso seguía "vivo" (por eso Railway
+    // lo veía activo) pero nada respondía nunca.
+    //
+    // 25s: por debajo de los 60s que espera nginx antes de dar timeout,
+    // así la propia API responde con un error claro primero, y — más
+    // importante — libera _uidPromise/_fetchEnCurso para que la
+    // SIGUIENTE petición tenga una oportunidad limpia de intentarlo de
+    // nuevo, en vez de quedar todo el sistema pegado detrás de una
+    // llamada zombie.
+    const timer = setTimeout(() => {
+      reject(new Error(`Odoo no respondió en ${ODOO_TIMEOUT_MS / 1000}s (timeout) — método: ${method}`));
+    }, ODOO_TIMEOUT_MS);
+
     client.methodCall(method, params, (err: unknown, value: T) => {
+      clearTimeout(timer);
       if (err) reject(err);
       else resolve(value);
     });

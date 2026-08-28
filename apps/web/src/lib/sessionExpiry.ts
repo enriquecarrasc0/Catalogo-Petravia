@@ -29,12 +29,19 @@ export function esErrorDeSesion(mensaje: string): boolean {
 let yaRedirigiendo = false;
 
 function irALogin() {
+  // import.meta.env.BASE_URL refleja el "base" configurado en
+  // vite.config.ts (actualmente "/catalogo/") — usarlo en vez de
+  // hardcodear "/login" a secas evita que esto se rompa otra vez si el
+  // base de la app cambia en el futuro. Antes mandaba a la raíz del
+  // dominio (fuera de donde vive la app), que quedaba en blanco.
+  const loginPath = `${import.meta.env.BASE_URL}login`;
+
   // Evita redirigir más de una vez si varias peticiones fallan a la vez
   // (ej. 3 queries en paralelo reciben 401 al mismo tiempo), y no hace
   // nada si ya estamos en /login.
-  if (yaRedirigiendo || window.location.pathname === '/login') return;
+  if (yaRedirigiendo || window.location.pathname === loginPath) return;
   yaRedirigiendo = true;
-  window.location.href = '/login?expirada=1';
+  window.location.href = `${loginPath}?expirada=1`;
 }
 
 /**
