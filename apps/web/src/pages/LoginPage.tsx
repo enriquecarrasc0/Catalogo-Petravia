@@ -99,10 +99,9 @@ export default function LoginPage() {
 
   return (
     <div className="min-h-screen bg-stone-50 flex flex-col items-center justify-center p-4">
-      {/* <Link>, no <a href="/"> — así respeta el "basename" de la app
-          (/catalogo) automáticamente. Con <a> normal, el navegador hacía
-          una recarga cruda a la raíz del dominio, que en producción es
-          una URL distinta de donde vive la app y quedaba en blanco. */}
+      {/* <Link>, no <a href="/"> — así respeta las rutas de React
+          Router correctamente. Con <a> normal, el navegador hacía una
+          recarga cruda del navegador en vez de una navegación interna. */}
       <Link to="/" className="mb-10 flex flex-col items-center gap-2">
         <img src="/brand/isotipo-beige.png" alt="" className="h-16 w-auto" />
         <span

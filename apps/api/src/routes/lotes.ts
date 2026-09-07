@@ -130,14 +130,6 @@ lotesRouter.get('/:id', async (req, res, next) => {
     const esAdmin = Boolean(vendedorIdSesion) && esVendedorAdmin(vendedorIdSesion!);
     const loteId = decodeURIComponent(req.params.id);
     const lote = await getLote(loteId);
-    // ── DIAGNÓSTICO TEMPORAL — borrar en cuanto encontremos la causa ──
-    console.log('[DEBUG lote/:id]', {
-      loteId, esAdmin, vendedorIdSesion,
-      encontrado: Boolean(lote),
-      estado: lote?.estado, tipo: lote?.tipo, ubicacionCruda: lote?.ubicacion,
-      visible: lote ? esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo) : null,
-    });
-    // ───────────────────────────────────────────────────────────────
     if (!lote) { res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return; }
 
     if (!esAdmin) {
