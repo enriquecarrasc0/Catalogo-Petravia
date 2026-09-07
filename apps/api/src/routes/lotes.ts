@@ -1,9 +1,10 @@
 import { Router } from 'express';
-import { listLotes, getLote, esUbicacionVisibleParaCliente, esLoteApartadoPorVendedor, setLoteOverride } from '../services/lotes.service.js';
+import { listLotes, getLote, esUbicacionVisibleParaCliente, esLoteApartadoPorVendedor, conUbicacionAmigable, setLoteOverride } from '../services/lotes.service.js';
 import { apartarLote } from '../services/apartados.service.js';
 import { buscarLotes, obtenerMateriales, obtenerGrupos } from '../services/busqueda.service.js';
 import { generarZipFotosLotes, construirNombreArchivoZip } from '../services/fotosZip.service.js';
 import { authClient, authVendedor, isVendedorRequest, type AuthenticatedRequest, type VendedorRequest } from '../middleware/authClient.js';
+import { validarToken } from '../services/tokens.service.js';
 import { esVendedorAdmin } from '../services/vendedorAuth.service.js';
 import type { GrupoMaterial, Acabado, EstadoLote, TipoLote } from '@petravia/shared';
 
@@ -64,8 +65,32 @@ lotesRouter.get('/buscar', async (req, res, next) => {
 });
 
 // POST /api/lotes/fotos-zip — descarga un .zip con las fotos de varios lotes
-// (buscador avanzado). Requiere sesión de cliente, igual que apartar.
-lotesRouter.post('/fotos-zip', authClient, async (req: AuthenticatedRequest, res, next) => {
+// (buscador avanzado). Acepta sesión de cliente O de vendedor — el
+// vendedor lo usa para mandarle fotos a su cliente antes de apartarle
+// algo, igual que el cliente lo usa para sí mismo.
+lotesRouter.post('/fotos-zip', (req: AuthenticatedRequest & VendedorRequest, res, next) => {
+  const authHeader = req.headers.authorization;
+  if (!authHeader?.startsWith('Bearer ')) {
+    res.status(401).json({ ok: false, error: 'Token requerido' }); return;
+  }
+  const token = authHeader.slice(7);
+  const clientData = validarToken(token);
+  if (clientData) {
+    req.clientEmail = clientData.email;
+    req.clientNombre = clientData.nombre;
+    req.clientToken = token;
+    req.clientVendedorId = clientData.vendedorId;
+    next();
+    return;
+  }
+  const vendedorId = isVendedorRequest(req);
+  if (vendedorId) {
+    req.vendedorId = vendedorId;
+    next();
+    return;
+  }
+  res.status(401).json({ ok: false, error: 'Token inválido o expirado' });
+}, async (req, res, next) => {
   try {
     const { loteIds } = req.body as { loteIds?: unknown };
     if (!Array.isArray(loteIds) || loteIds.length === 0) {
@@ -105,6 +130,14 @@ lotesRouter.get('/:id', async (req, res, next) => {
     const esAdmin = Boolean(vendedorIdSesion) && esVendedorAdmin(vendedorIdSesion!);
     const loteId = decodeURIComponent(req.params.id);
     const lote = await getLote(loteId);
+    // ── DIAGNÓSTICO TEMPORAL — borrar en cuanto encontremos la causa ──
+    console.log('[DEBUG lote/:id]', {
+      loteId, esAdmin, vendedorIdSesion,
+      encontrado: Boolean(lote),
+      estado: lote?.estado, tipo: lote?.tipo, ubicacionCruda: lote?.ubicacion,
+      visible: lote ? esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo) : null,
+    });
+    // ───────────────────────────────────────────────────────────────
     if (!lote) { res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return; }
 
     if (!esAdmin) {
@@ -117,7 +150,10 @@ lotesRouter.get('/:id', async (req, res, next) => {
         res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return;
       }
     }
-    res.json({ ok: true, data: lote });
+    // La transformación a nombre amigable (Puebla/Veracruz) va DESPUÉS
+    // del chequeo de arriba — ese chequeo necesita el código crudo
+    // ("TMM1/Existencias"), no el nombre amigable.
+    res.json({ ok: true, data: conUbicacionAmigable(lote) });
   } catch (err) { next(err); }
 });
 
@@ -133,7 +169,7 @@ lotesRouter.put('/:id/renombrar', authVendedor, async (req: VendedorRequest, res
 
     setLoteOverride(loteId, { grupo, acabado }, req.vendedorId);
     const lote = await getLote(loteId);
-    res.json({ ok: true, data: lote });
+    res.json({ ok: true, data: lote ? conUbicacionAmigable(lote) : null });
   } catch (err) { next(err); }
 });
 
@@ -153,17 +189,11 @@ lotesRouter.post('/:id/apartar', authClient, async (req: AuthenticatedRequest, r
   } catch (err) { next(err); }
 });
 
-// POST /api/lotes/:id/apartar-vendedor — el vendedor aparta un lote a
-// nombre de uno de sus clientes, con duración configurable (horas).
-// El admin NO puede usar esto: no tiene clientes propios (solo
-// supervisa/gestiona a los vendedores), así que apartar a nombre de un
-// cliente no le corresponde a esa cuenta.
+// POST /api/lotes/:id/apartar-vendedor — el vendedor (o admin, si también
+// maneja clientes propios) aparta un lote a nombre de uno de sus
+// clientes, con duración configurable (horas).
 lotesRouter.post('/:id/apartar-vendedor', authVendedor, async (req: VendedorRequest, res, next) => {
   try {
-    if (esVendedorAdmin(req.vendedorId!)) {
-      res.status(403).json({ ok: false, error: 'La cuenta de administrador no aparta lotes a nombre de clientes — esa acción es solo para vendedores' });
-      return;
-    }
     const { clienteEmail, clienteNombre, horas } = req.body as {
       clienteEmail?: string; clienteNombre?: string; horas?: number;
     };

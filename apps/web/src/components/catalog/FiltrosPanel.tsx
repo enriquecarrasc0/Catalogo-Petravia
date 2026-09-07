@@ -6,6 +6,7 @@ import { useT } from '@/i18n/I18nContext';
 import MisApartados from './MisApartados';
 import MisFavoritos from './MisFavoritos';
 import BuscadorAvanzado from './BuscadorAvanzado';
+import BuscadorAvanzadoVendedor from '@/components/vendedor/BuscadorAvanzadoVendedor';
 import type { Acabado, FiltrosCatalogo } from '@petravia/shared';
 import type { ClientData } from '@/hooks/useClientAuth';
 import type { PanelCliente } from '@/pages/CatalogoPage';
@@ -188,7 +189,12 @@ interface Props {
 
 export default function FiltrosPanel({ client, panelCliente, setPanelCliente }: Props) {
   const { filtros, toggleGrupo, toggleAcabado, setEstado, setTipo, resetFiltros } = useCatalogoStore();
-  const esAdmin = Boolean(getVendedorSession());
+  const sesionVendedor = getVendedorSession();
+  const esAdmin = Boolean(sesionVendedor);
+  // La búsqueda avanzada con "apartar a nombre de un cliente" es para
+  // cualquier cuenta de vendedor, sea vendedor normal o admin (algunas
+  // cuentas admin también manejan clientes propios).
+  const esVendedor = Boolean(sesionVendedor);
   const t = useT();
   const [busquedaAbierta, setBusquedaAbierta] = useState(false);
   const ESTADOS = esAdmin ? ESTADOS_ADMIN : ESTADOS_CLIENTE;
@@ -226,16 +232,17 @@ export default function FiltrosPanel({ client, panelCliente, setPanelCliente }: 
           />
         )}
 
-        {/* Búsqueda avanzada por metraje — solo clientes, abre en pestaña emergente */}
-        {client && (
+        {/* Búsqueda avanzada por metraje — cliente (aparta para sí mismo)
+            o vendedor/admin (aparta a nombre de un cliente propio). */}
+        {(client || esVendedor) && (
           <button
             onClick={() => setBusquedaAbierta(true)}
-            className="flex items-center gap-1.5 text-xs px-3 py-2 uppercase tracking-wider transition-colors"
-            style={{ border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', background: 'transparent', whiteSpace: 'nowrap' }}
+            className="flex items-center gap-2 text-xs px-4 py-2 uppercase tracking-wider transition-colors"
+            style={{ border: '1px solid var(--border)', borderRadius: '6px', color: 'var(--muted)', background: 'var(--white)', whiteSpace: 'nowrap' }}
             onMouseEnter={e => { e.currentTarget.style.borderColor = 'var(--gold)'; e.currentTarget.style.color = 'var(--gold-dark)'; }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border)'; e.currentTarget.style.color = 'var(--muted)'; }}
           >
-            <Search size={11} strokeWidth={1.75} />
+            <Search size={13} strokeWidth={1.75} />
             {t('filtros.busquedaAvanzada')}
           </button>
         )}
@@ -263,6 +270,9 @@ export default function FiltrosPanel({ client, panelCliente, setPanelCliente }: 
           <MisFavoritos client={client} isOpen={panelCliente === 'favoritos'} onClose={() => setPanelCliente(null)} />
           <BuscadorAvanzado isOpen={busquedaAbierta} onClose={() => setBusquedaAbierta(false)} />
         </>
+      )}
+      {esVendedor && (
+        <BuscadorAvanzadoVendedor isOpen={busquedaAbierta} onClose={() => setBusquedaAbierta(false)} />
       )}
     </div>
   );

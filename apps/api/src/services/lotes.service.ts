@@ -450,9 +450,12 @@ function filtrar(lotes: Lote[], params: ListParams, estadosLocales: Map<string, 
 }
 
 /** Aplica el nombre amigable de ubicación (Puebla/Veracruz) — siempre al
- * final, después de filtrar, para no afectar la lógica de visibilidad
- * (que necesita el código crudo). */
-function conUbicacionAmigable(lote: Lote): Lote {
+ * final, después de filtrar/chequear visibilidad, para no afectar esa
+ * lógica (que necesita el código crudo, ej. "TMM1/Existencias", no
+ * "Puebla"). Exportada porque routes/lotes.ts también la necesita: ahí
+ * se re-chequea visibilidad en el detalle de un solo lote, y ese chequeo
+ * debe correr ANTES de transformar la ubicación, no después. */
+export function conUbicacionAmigable(lote: Lote): Lote {
   return { ...lote, ubicacion: etiquetaUbicacion(lote.ubicacion) };
 }
 
@@ -464,10 +467,22 @@ export async function listLotes(params: ListParams = {}): Promise<PaginatedRespo
   return { items, total: filtrados.length, page, pageSize, totalPages: Math.ceil(filtrados.length / pageSize) };
 }
 
+/**
+ * Devuelve el lote CRUDO (ubicación sin transformar) — a propósito.
+ * Antes esta función ya devolvía el lote con conUbicacionAmigable()
+ * aplicado, y como routes/lotes.ts vuelve a chequear visibilidad
+ * (esUbicacionVisibleParaCliente) sobre el resultado, terminaba
+ * comparando "Puebla"/"Veracruz" contra "existencias"/"alm" — que
+ * nunca coincide — y por eso CUALQUIER lote le daba 404 a
+ * vendedores/clientes, aunque sí apareciera en la lista (que sí
+ * filtraba bien, porque ahí el chequeo corría antes de transformar).
+ * Quien llame a getLote() y vaya a exponer el resultado debe aplicar
+ * conUbicacionAmigable() él mismo, después de cualquier chequeo de
+ * visibilidad — igual que ya hace listLotes() arriba.
+ */
 export async function getLote(id: string): Promise<Lote | null> {
   const { lotes: todos } = await getAllLotesConEstados();
-  const lote = todos.find(l => l.id === id);
-  return lote ? conUbicacionAmigable(lote) : null;
+  return todos.find(l => l.id === id) ?? null;
 }
 
 /** ¿Este lote está apartado, ahora mismo, por este vendedor? — para la

@@ -214,9 +214,10 @@ export default function LoteDetalleInline({ loteId, onVolver }: Props) {
             </div>
           )}
 
-          {/* El admin no aparta lotes a nombre de clientes — no tiene
-              clientes propios, solo supervisa a los vendedores. */}
-          {lote.estado === 'disponible' && !getVendedorSession()?.esAdmin && (
+          {/* Disponible para cualquier cuenta de vendedor, admin
+              incluido — algunas cuentas admin también manejan clientes
+              propios. */}
+          {lote.estado === 'disponible' && (
             <ApartarVendedor loteId={lote.id} />
           )}
         </div>
