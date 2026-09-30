@@ -320,8 +320,55 @@ async function getUbicacionesPorLote(lotIds: number[]): Promise<Map<number, stri
   return ubicaciones;
 }
 
+/**
+ * Trae TODOS los stock.lot de Odoo, paginando en bloques de `PAGE_SIZE`
+ * en vez de un único `search_read` con `limit` fijo.
+ *
+ * Antes se pedía `limit: 2000` en una sola llamada. Mientras el total de
+ * lotes en Odoo se mantuvo por debajo de eso, pasó desapercibido — pero
+ * en cuanto el inventario creció más allá de 2000 registros (ej. tras una
+ * importación masiva de bloques), Odoo simplemente cortaba la respuesta
+ * ahí, sin avisar, y CUÁLES lotes sobrevivían al corte dependía del orden
+ * por default de Odoo — nada garantizaba que fueran, por ejemplo, las
+ * láminas en vez de los bloques. Resultado: el catálogo podía mostrar de
+ * golpe muchísimo menos inventario del real, sin ningún error visible.
+ *
+ * `order: 'id asc'` es explícito a propósito: paginar con offset/limit
+ * solo da resultados estables si el orden no cambia entre llamadas: sin
+ * un order fijo, Odoo podría (en teoría) devolver páginas distintas si el
+ * orden implícito varía, duplicando o saltándose registros.
+ *
+ * `MAX_PAGINAS` es un techo de seguridad — no un límite de negocio, sino
+ * una salvaguarda para que un bug futuro (o un crecimiento de inventario
+ * fuera de lo previsto) no deje a la API pidiendo páginas a Odoo sin fin.
+ * Si algún día el inventario real supera ese techo, esto avisa por log en
+ * vez de fallar en silencio otra vez.
+ */
+async function fetchAllStockLots(): Promise<OdooLot[]> {
+  const PAGE_SIZE = 2000;
+  const MAX_PAGINAS = 20; // techo de seguridad: hasta 40,000 lotes
+
+  const todos: OdooLot[] = [];
+  let offset = 0;
+
+  for (let pagina = 0; pagina < MAX_PAGINAS; pagina++) {
+    const page = await executeKw<OdooLot[]>('stock.lot', 'search_read', [[]], {
+      fields: LOT_FIELDS,
+      limit: PAGE_SIZE,
+      offset,
+      order: 'id asc',
+    });
+    todos.push(...page);
+    if (page.length < PAGE_SIZE) return todos; // última página (vino incompleta)
+    offset += PAGE_SIZE;
+  }
+
+  console.warn(`[WARN] fetchAllStockLots: se alcanzó el techo de seguridad de ${MAX_PAGINAS} páginas (${MAX_PAGINAS * PAGE_SIZE} lotes) — puede haber más en Odoo sin traer. Revisar MAX_PAGINAS.`);
+  return todos;
+}
+
 async function fetchOdooData(): Promise<OdooDataCache> {
-  const rawLotes = await executeKw<OdooLot[]>('stock.lot', 'search_read', [[]], { fields: LOT_FIELDS, limit: 2000 });
+  const rawLotes = await fetchAllStockLots();
 
   const allImageIds = rawLotes.flatMap(l => l.image_ids ?? []);
   const fotosMap = new Map<number, Foto>();
