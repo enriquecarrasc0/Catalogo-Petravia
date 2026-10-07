@@ -51,6 +51,8 @@ export async function buscarLotes(params: BusquedaParams): Promise<ResultadoBusq
   const metrica = (l: Lote): number => (tipoBusqueda === 'bloque' ? (l.saldoM3 ?? 0) : l.saldoM2);
 
   const candidatos = todos.filter(l => {
+    // Solo lotes con al menos 1 foto (igual que el catálogo).
+    if (l.fotos.length === 0) return false;
     if (params.solo_disponibles !== false && l.estado !== 'disponible') return false;
     if (params.soloRutasPermitidas !== false && !esUbicacionVisibleParaCliente(l.ubicacion, l.tipo)) return false;
     // No se combinan bloques y láminas en un mismo resultado — unidades distintas.
@@ -134,7 +136,7 @@ export async function obtenerMateriales(tipo?: TipoLote): Promise<string[]> {
   const lotes = await getAllLotes();
   const set = new Set(
     lotes
-      .filter(l => l.estado === 'disponible' && (!tipo || l.tipo === tipo))
+      .filter(l => l.fotos.length > 0 && l.estado === 'disponible' && (!tipo || l.tipo === tipo))
       .map(l => l.material)
   );
   return Array.from(set).sort();
@@ -142,6 +144,6 @@ export async function obtenerMateriales(tipo?: TipoLote): Promise<string[]> {
 
 export async function obtenerGrupos(): Promise<string[]> {
   const lotes = await getAllLotes();
-  const set = new Set(lotes.filter(l => l.estado === 'disponible').map(l => l.grupo));
+  const set = new Set(lotes.filter(l => l.fotos.length > 0 && l.estado === 'disponible').map(l => l.grupo));
   return Array.from(set).sort();
 }

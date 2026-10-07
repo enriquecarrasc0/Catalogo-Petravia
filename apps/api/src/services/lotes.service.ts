@@ -472,14 +472,18 @@ export type ListParams = Partial<FiltrosCatalogo> & {
 };
 
 function filtrar(lotes: Lote[], params: ListParams, estadosLocales: Map<string, EstadoLocal>): Lote[] {
-  const { grupos = [], acabados = [], estado = 'todos', tipo = 'todos', busqueda = '', soloConFoto = false,
+  const { grupos = [], acabados = [], estado = 'todos', tipo = 'todos', busqueda = '',
           soloRutasPermitidas = false, vendedorIdSesion = null } = params;
   return lotes.filter(l => {
+    // El catálogo solo muestra lotes con al menos 1 foto — para TODOS
+    // (admin, vendedor y cliente). Se exige aquí, en el servidor, y no
+    // depende de lo que mande el navegador (antes era un parámetro
+    // opcional "soloConFoto" que el frontend siempre mandaba en false).
+    if (l.fotos.length === 0)                            return false;
     if (grupos.length   && !grupos.includes(l.grupo))   return false;
     if (acabados.length && !acabados.includes(l.acabado as any)) return false;
     if (estado !== 'todos' && l.estado !== estado)       return false;
     if (tipo !== 'todos' && l.tipo !== tipo)             return false;
-    if (soloConFoto && l.fotos.length === 0)             return false;
     if (soloRutasPermitidas && !esUbicacionVisibleParaCliente(l.ubicacion, l.tipo)) {
       // Excepción: si el lote está apartado por el vendedor de esta
       // sesión, lo puede ver de todos modos (para darle seguimiento a
