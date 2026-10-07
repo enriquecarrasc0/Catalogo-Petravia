@@ -4,6 +4,10 @@
  * Los estados apartado/vendido se guardan en SQLite (apartados.service).
  * Al servir lotes, se mezclan los datos de Odoo con el estado local.
  */
+import {
+  urlFotoLote, versionDe, registrarFotos, esFotoPendiente, alCambiarPendientes,
+  deteccionConfigurada, totalFotosPendientes,
+} from './fotosOptimizadas.service.js';
 import { executeKw } from '../db/odoo.js';
 import db from '../db/index.js';
 import type { Lote, Foto, Pieza, PaginatedResponse, FiltrosCatalogo } from '@petravia/shared';
@@ -85,6 +89,7 @@ interface OdooLotImage {
   id: number;
   name: string | false;
   sequence: number;
+  write_date: string | false;
 }
 
 /** stock.quant — usado solo para saber en qué ubicación física está cada lote. */
@@ -113,18 +118,15 @@ function extraerAcabado(nombre: string): string {
 }
 
 /**
- * URLs de imagen — apuntan al proxy local (/api/imagenes/...) en lugar
+ * URLs de imagen — apuntan al proxy local (/api/imagenes/lote/...) en lugar
  * de directo a Odoo, porque Odoo bloquea la carga de /web/image/...
  * cuando la request viene de un origen distinto (el navegador del cliente).
- * El proxy descarga la imagen server-to-server (sin esa restricción) y la
- * re-sirve con cache.
  *
- * Formato origen en Odoo: /web/image/<modelo>/<id>/<campo>
- *   - image_1920 → único campo disponible en este modelo custom
- *     (se usa para thumb y HD — el navegador escala con object-fit)
+ * El proxy sirve versiones WebP optimizadas (thumb ~800px / hd ~1920px)
+ * cacheadas en disco — ver services/fotosOptimizadas.service.ts. La URL
+ * lleva ?v=<write_date> para que el navegador la cachee indefinidamente y
+ * se invalide sola si cambian la foto en Odoo.
  */
-const fotoUrlThumb = (id: number) => `/api/imagenes/stock.lot.image/${id}/image_256`;
-const fotoUrlHd    = (id: number) => `/api/imagenes/stock.lot.image/${id}/image_1920`;
 
 // ─── Estado local (apartados en SQLite) ──────────────────────
 
@@ -288,6 +290,19 @@ const CACHE_TTL_MS = 5 * 60 * 1000;
 // todas comparten la misma promesa en curso.
 let _fetchEnCurso: Promise<OdooDataCache> | null = null;
 
+// Log de control: cada vez que cambia el conjunto de fotos detectadas como
+// "Foto pendiente de subir", avisa cuántos lotes quedaron ocultos por eso
+// (para verificar en los logs de Railway que la detección va bien).
+alCambiarPendientes(() => {
+  if (!deteccionConfigurada() || !_cache) return;
+  const ocultos = _cache.lotes
+    .filter(l => (l.image_ids ?? []).length > 0 && l.image_ids.every(id => esFotoPendiente(id)))
+    .map(l => l.name);
+  const muestra = ocultos.slice(0, 15).join(', ') + (ocultos.length > 15 ? ', ...' : '');
+  console.log(`  [fotos] "Foto pendiente": ${totalFotosPendientes()} foto(s) detectadas → ` +
+    `${ocultos.length} lote(s) ocultos del catálogo${ocultos.length ? ` (${muestra})` : ''}`);
+});
+
 /**
  * Obtiene la ubicación física "principal" de cada lote a partir de
  * stock.quant (la ubicación con más cantidad, si el lote está repartido
@@ -375,17 +390,25 @@ async function fetchOdooData(): Promise<OdooDataCache> {
 
   if (allImageIds.length > 0) {
     const images = await executeKw<OdooLotImage[]>('stock.lot.image', 'search_read',
-      [[['id', 'in', allImageIds]]], { fields: ['id', 'name', 'sequence'] });
+      [[['id', 'in', allImageIds]]], { fields: ['id', 'name', 'sequence', 'write_date'] });
 
     for (const img of images) {
+      const version = versionDe(img.write_date);
       fotosMap.set(img.id, {
         id: String(img.id),
         nombre: img.name || `foto-${img.id}`,
-        urlThumb: fotoUrlThumb(img.id),
-        urlHd: fotoUrlHd(img.id),
+        urlThumb: urlFotoLote(img.id, version, 'thumb'),
+        urlHd: urlFotoLote(img.id, version, 'hd'),
         loteId: '',
       });
     }
+
+    // Registra versiones y arranca en segundo plano la conversión a WebP
+    // de las fotos que todavía no estén en el cache de disco.
+    registrarFotos(
+      images.map(img => ({ id: img.id, version: versionDe(img.write_date) })),
+      loteId => rawLotes.find(l => l.name === loteId)?.image_ids ?? [],
+    );
   }
 
   const ubicaciones = await getUbicacionesPorLote(rawLotes.map(l => l.id));
@@ -443,6 +466,9 @@ async function getAllLotesConEstados(): Promise<{ lotes: Lote[]; estadosLocales:
 
   const lotes = rawLotes.map(raw => {
     const fotos = (raw.image_ids ?? [])
+      // Fuera la imagen genérica "Foto pendiente de subir": si el lote no
+      // tiene ninguna otra, se queda sin fotos y filtrar() lo oculta.
+      .filter(id => !esFotoPendiente(id))
       .map(id => fotosMap.get(id))
       .filter((f): f is Foto => !!f)
       .map(f => ({ ...f, loteId: raw.name }));

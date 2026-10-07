@@ -4,6 +4,11 @@ import { Search, LayoutGrid, Gem, ChevronLeft, Package, X, PackageCheck, Loader2
 import { useLotes } from '@/hooks/useLotes';
 import { useCatalogoStore } from '@/store/catalogoStore';
 import LoteCardShowcase from '@/components/catalog/LoteCardShowcase';
+
+/** Las primeras tarjetas (lo que se ve sin hacer scroll en escritorio: 2
+ * filas de 4) cargan su foto de inmediato y con prioridad alta; el resto
+ * espera a acercarse a la pantalla (loading="lazy"). */
+const FOTOS_PRIORITARIAS = 8;
 import FiltrosPanel from '@/components/catalog/FiltrosPanel';
 import MaterialesGaleria from '@/components/catalog/MaterialesGaleria';
 import { useCurrentClient } from '@/hooks/useClientAuth';
@@ -378,10 +383,11 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                       </div>
 
                       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                        {items.map((lote) => (
+                        {items.map((lote, j) => (
                           <LoteCardShowcase
                             key={lote.id}
                             lote={lote}
+                            prioridad={i === 0 && j < FOTOS_PRIORITARIAS}
                             onClick={onLoteClick ? () => onLoteClick(lote.id) : undefined}
                             checkable={puedeSeleccionar && lote.estado === 'disponible'}
                             checked={seleccionados.has(lote.id)}
@@ -400,10 +406,11 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                     className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
                     style={{ opacity: isFetching ? 0.5 : 1, transition: 'opacity 200ms' }}
                   >
-                    {data.items.map((lote) => (
+                    {data.items.map((lote, j) => (
                       <LoteCardShowcase
                         key={lote.id}
                         lote={lote}
+                        prioridad={j < FOTOS_PRIORITARIAS}
                         onClick={onLoteClick ? () => onLoteClick(lote.id) : undefined}
                         checkable={puedeSeleccionar && lote.estado === 'disponible'}
                         checked={seleccionados.has(lote.id)}

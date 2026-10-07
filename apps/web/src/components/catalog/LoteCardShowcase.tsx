@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { ImageOff, Images, Check, ArrowUpRight, MapPin, Heart } from 'lucide-react';
 import type { Lote } from '@petravia/shared';
@@ -44,6 +45,11 @@ interface Props {
    */
   favorito?: boolean;
   onToggleFavorito?: () => void;
+  /**
+   * Foto "arriba del pliegue" (primeras tarjetas del catálogo): se descarga
+   * de inmediato y con prioridad alta en vez de esperar al lazy-loading.
+   */
+  prioridad?: boolean;
 }
 
 /**
@@ -52,8 +58,11 @@ interface Props {
  * degradado. Es la única vista del catálogo principal, y también se
  * reutiliza (con `size="compact"`) en el buscador avanzado.
  */
-export default function LoteCardShowcase({ lote, onClick, seleccionado, destacado, size = 'default', checkable, checked, onToggleCheck, favorito, onToggleFavorito }: Props) {
+export default function LoteCardShowcase({ lote, onClick, seleccionado, destacado, size = 'default', checkable, checked, onToggleCheck, favorito, onToggleFavorito, prioridad = false }: Props) {
   const t = useT();
+  // La foto entra con un fundido suave cuando termina de descargar, en vez
+  // de "pintarse" de arriba a abajo sobre el fondo arena.
+  const [fotoCargada, setFotoCargada] = useState(false);
   const foto = lote.fotos[0];
   const esVendido = lote.estado === 'vendido';
   const enModoSeleccion = onClick !== undefined && seleccionado !== undefined;
@@ -85,14 +94,27 @@ export default function LoteCardShowcase({ lote, onClick, seleccionado, destacad
         <img
           src={foto.urlThumb}
           alt={`${lote.material} – Lote ${lote.id}`}
-          className="absolute inset-0 w-full h-full transition-transform duration-700 ease-out"
+          width={800}
+          height={600}
+          className="absolute inset-0 w-full h-full"
           style={{
             objectFit: 'cover',
             filter: esVendido ? 'grayscale(65%)' : 'none',
+            opacity: fotoCargada ? 1 : 0,
+            transition: 'opacity 300ms ease-out, transform 700ms ease-out',
           }}
           onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.06)')}
           onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
-          loading="lazy"
+          // Si la imagen ya venía del cache del navegador, puede estar
+          // completa antes de que React enganche onLoad.
+          ref={el => { if (el?.complete && el.naturalWidth > 0 && !fotoCargada) setFotoCargada(true); }}
+          onLoad={() => setFotoCargada(true)}
+          onError={() => setFotoCargada(true)}
+          loading={prioridad ? 'eager' : 'lazy'}
+          decoding="async"
+          // React 18 no reconoce `fetchPriority` en camelCase; en minúsculas
+          // pasa directo al DOM sin warning.
+          {...{ fetchpriority: prioridad ? 'high' : 'auto' }}
         />
       ) : (
         <div

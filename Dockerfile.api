@@ -45,6 +45,14 @@ COPY packages/shared/package.json ./packages/shared/
 COPY apps/api/package.json ./apps/api/
 RUN npm ci --omit=dev --ignore-scripts
 
+# sharp (optimización de fotos a WebP) trae su binario precompilado para
+# Alpine en el paquete opcional @img/sharp-linuxmusl-x64 — no necesita
+# scripts de instalación. Esto solo verifica que sí quedó instalado: si
+# falla aquí, el build se detiene con un mensaje claro en vez de que la
+# API truene al arrancar.
+RUN cd apps/api && node -e "require('sharp')" \
+  || (echo "❌ sharp no cargó — revisa que package-lock.json incluya @img/sharp-linuxmusl-x64" && exit 1)
+
 # Copiar el binario nativo ya compilado desde el builder
 COPY --from=builder /app/node_modules/better-sqlite3 ./node_modules/better-sqlite3
 

@@ -120,6 +120,30 @@ const SCHEMA = `
     UNIQUE(lote_id, cliente_email)
   );
 
+  -- ─── Metadatos de fotos optimizadas ─────────────────────────
+  -- Una fila por stock.lot.image de Odoo ya procesada: qué versión
+  -- (write_date) se convirtió a miniatura WebP en disco, y una "firma"
+  -- visual de 32×32 en escala de grises que sirve para reconocer la
+  -- imagen genérica de "Foto pendiente de subir" sin importar si se
+  -- subió como JPG, PNG o en otro tamaño. No guarda la imagen en sí
+  -- (esa vive en disco, junto a la base de datos).
+  CREATE TABLE IF NOT EXISTS fotos_meta (
+    image_id      INTEGER PRIMARY KEY,   -- id del stock.lot.image en Odoo
+    version       TEXT NOT NULL,         -- write_date en base36
+    firma         BLOB NOT NULL,         -- 1024 bytes (32×32 grises)
+    procesada_en  TEXT DEFAULT (datetime('now'))
+  );
+
+  -- Firmas "aprendidas" de la imagen genérica "Foto pendiente de subir",
+  -- tomadas de los lotes de FOTO_PENDIENTE_LOTES la primera vez que se
+  -- procesan. Se conservan aunque después le suban la foto real a ese lote.
+  CREATE TABLE IF NOT EXISTS fotos_pendiente_ref (
+    lote_id   TEXT NOT NULL,
+    image_id  INTEGER NOT NULL,
+    firma     BLOB NOT NULL,
+    PRIMARY KEY (lote_id, image_id)
+  );
+
   -- ─── Índices (solo los que NO dependen de vendedor_id) ────
   -- Los índices sobre vendedor_id se crean más abajo, después de
   -- agregarColumnaSiFalta(), porque en instalaciones existentes

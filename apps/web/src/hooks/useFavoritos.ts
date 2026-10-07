@@ -19,7 +19,8 @@ export function snapshotDeLote(lote: Lote): SnapshotLote {
     saldoM2: lote.saldoM2,
     saldoM3: lote.saldoM3,
     saldoPiezas: lote.saldoPiezas,
-    fotoUrl: lote.fotos?.[0]?.urlHd ?? null,
+    // Miniatura (no HD): en Mis favoritos se muestra chiquita.
+    fotoUrl: lote.fotos?.[0]?.urlThumb ?? null,
   };
 }
 
