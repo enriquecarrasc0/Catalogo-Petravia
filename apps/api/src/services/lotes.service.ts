@@ -181,6 +181,45 @@ export function clearLoteOverride(loteId: string): void {
   db.prepare(`DELETE FROM lote_overrides WHERE lote_id = ?`).run(loteId);
 }
 
+// ─── Lotes ocultos temporalmente (solo admin) — overlay en SQLite ──
+
+interface OcultoLocal { hasta: string | null; }
+
+function getOcultosLocales(): Map<string, OcultoLocal> {
+  const map = new Map<string, OcultoLocal>();
+  try {
+    // Los ocultamientos vencidos se borran aquí mismo: así "temporalmente"
+    // se cumple sin depender de ningún cron.
+    db.prepare(`DELETE FROM lotes_ocultos WHERE hasta IS NOT NULL AND hasta <= ?`).run(new Date().toISOString());
+    const rows = db.prepare(`SELECT lote_id, hasta FROM lotes_ocultos`).all() as
+      Array<{ lote_id: string; hasta: string | null }>;
+    for (const r of rows) map.set(r.lote_id, { hasta: r.hasta });
+  } catch {
+    // Tabla aún no existe (primera ejecución) — se ignora.
+  }
+  return map;
+}
+
+/**
+ * Oculta un lote del catálogo para clientes y vendedores. `dias` = null →
+ * hasta que el admin lo vuelva a mostrar. Volver a ocultarlo reemplaza el
+ * plazo anterior.
+ */
+export function ocultarLote(loteId: string, dias: number | null, vendedorId?: string): void {
+  const hasta = dias ? new Date(Date.now() + dias * 24 * 60 * 60 * 1000).toISOString() : null;
+  db.prepare(`
+    INSERT INTO lotes_ocultos (lote_id, hasta, oculto_por, oculto_en)
+    VALUES (?, ?, ?, datetime('now'))
+    ON CONFLICT(lote_id) DO UPDATE SET
+      hasta = excluded.hasta, oculto_por = excluded.oculto_por, oculto_en = excluded.oculto_en
+  `).run(loteId, hasta, vendedorId ?? null);
+}
+
+/** Vuelve a mostrar un lote oculto. */
+export function mostrarLote(loteId: string): void {
+  db.prepare(`DELETE FROM lotes_ocultos WHERE lote_id = ?`).run(loteId);
+}
+
 function getEstadosLocales(): Map<string, EstadoLocal> {
   const map = new Map<string, EstadoLocal>();
   try {
@@ -407,7 +446,7 @@ async function fetchOdooData(): Promise<OdooDataCache> {
     // de las fotos que todavía no estén en el cache de disco.
     registrarFotos(
       images.map(img => ({ id: img.id, version: versionDe(img.write_date) })),
-      loteId => rawLotes.find(l => l.name === loteId)?.image_ids ?? [],
+      new Map(rawLotes.flatMap(l => (l.image_ids ?? []).map(id => [id, l.name] as const))),
     );
   }
 
@@ -463,6 +502,7 @@ async function getAllLotesConEstados(): Promise<{ lotes: Lote[]; estadosLocales:
   const { lotes: rawLotes, fotos: fotosMap, ubicaciones } = await getOdooData();
   const estadosLocales = getEstadosLocales();
   const overridesLocales = getOverridesLocales();
+  const ocultosLocales = getOcultosLocales();
 
   const lotes = rawLotes.map(raw => {
     const fotos = (raw.image_ids ?? [])
@@ -472,7 +512,9 @@ async function getAllLotesConEstados(): Promise<{ lotes: Lote[]; estadosLocales:
       .map(id => fotosMap.get(id))
       .filter((f): f is Foto => !!f)
       .map(f => ({ ...f, loteId: raw.name }));
-    return mapLote(raw, fotos, estadosLocales.get(raw.name), ubicaciones.get(raw.id), overridesLocales.get(raw.name));
+    const lote = mapLote(raw, fotos, estadosLocales.get(raw.name), ubicaciones.get(raw.id), overridesLocales.get(raw.name));
+    const oculto = ocultosLocales.get(raw.name);
+    return oculto ? { ...lote, oculto: true, ocultoHasta: oculto.hasta } : lote;
   });
 
   lotes.sort(ordenLote);
@@ -495,17 +537,21 @@ export type ListParams = Partial<FiltrosCatalogo> & {
    * "puedo ver mi propio apartado aunque esté en una ubicación que de
    * otro modo no vería". No aplica a clientes. */
   vendedorIdSesion?: string | null;
+  /** true → incluir los lotes que el admin ocultó temporalmente (solo el
+   * admin los ve, marcados como ocultos, para poder volver a mostrarlos). */
+  incluirOcultos?: boolean;
 };
 
 function filtrar(lotes: Lote[], params: ListParams, estadosLocales: Map<string, EstadoLocal>): Lote[] {
   const { grupos = [], acabados = [], estado = 'todos', tipo = 'todos', busqueda = '',
-          soloRutasPermitidas = false, vendedorIdSesion = null } = params;
+          soloRutasPermitidas = false, vendedorIdSesion = null, incluirOcultos = false } = params;
   return lotes.filter(l => {
     // El catálogo solo muestra lotes con al menos 1 foto — para TODOS
     // (admin, vendedor y cliente). Se exige aquí, en el servidor, y no
     // depende de lo que mande el navegador (antes era un parámetro
     // opcional "soloConFoto" que el frontend siempre mandaba en false).
     if (l.fotos.length === 0)                            return false;
+    if (l.oculto && !incluirOcultos)                     return false;
     if (grupos.length   && !grupos.includes(l.grupo))   return false;
     if (acabados.length && !acabados.includes(l.acabado as any)) return false;
     if (estado !== 'todos' && l.estado !== estado)       return false;

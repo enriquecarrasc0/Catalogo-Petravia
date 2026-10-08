@@ -70,6 +70,9 @@ export default function CatalogoPage({ onLoteClick }: Props) {
   const { toggle: toggleFavorito } = useToggleFavorito(client?.token ?? null);
   const favoritosIds = useMemo(() => new Set(favoritos.map(f => f.loteId)), [favoritos]);
   const esAdmin = Boolean(getVendedorSession());
+  // Ojo: `esAdmin` de arriba es "cualquier vendedor" (nombre histórico).
+  // Ocultar lotes es SOLO para el perfil administrador real.
+  const esAdministrador = Boolean(getVendedorSession()?.esAdmin);
 
   const togglePanel = (p: PanelCliente) => setPanelCliente(prev => prev === p ? null : p);
 
@@ -388,6 +391,7 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                             key={lote.id}
                             lote={lote}
                             prioridad={i === 0 && j < FOTOS_PRIORITARIAS}
+                            adminOcultar={esAdministrador}
                             onClick={onLoteClick ? () => onLoteClick(lote.id) : undefined}
                             checkable={puedeSeleccionar && lote.estado === 'disponible'}
                             checked={seleccionados.has(lote.id)}
@@ -411,6 +415,7 @@ export default function CatalogoPage({ onLoteClick }: Props) {
                         key={lote.id}
                         lote={lote}
                         prioridad={j < FOTOS_PRIORITARIAS}
+                        adminOcultar={esAdministrador}
                         onClick={onLoteClick ? () => onLoteClick(lote.id) : undefined}
                         checkable={puedeSeleccionar && lote.estado === 'disponible'}
                         checked={seleccionados.has(lote.id)}

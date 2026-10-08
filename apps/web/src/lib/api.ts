@@ -85,6 +85,20 @@ export const api = {
     get(id: string): Promise<Lote> {
       return request(`/lotes/${encodeURIComponent(id)}`);
     },
+
+    /** SOLO ADMIN — oculta el lote del catálogo `dias` días (null = hasta
+     *  que se vuelva a mostrar). */
+    ocultar(id: string, dias: number | null): Promise<Lote> {
+      return request(`/lotes/${encodeURIComponent(id)}/ocultar`, {
+        method: 'PUT',
+        body: JSON.stringify({ dias }),
+      });
+    },
+
+    /** SOLO ADMIN — vuelve a mostrar un lote oculto. */
+    mostrar(id: string): Promise<Lote> {
+      return request(`/lotes/${encodeURIComponent(id)}/ocultar`, { method: 'DELETE' });
+    },
   },
 
   apartados: {

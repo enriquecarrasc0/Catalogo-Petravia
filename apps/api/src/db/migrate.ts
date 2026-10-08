@@ -82,6 +82,18 @@ const SCHEMA = `
     actualizado_en  TEXT DEFAULT (datetime('now'))
   );
 
+  -- ─── Lotes ocultos temporalmente (solo admin) ─────────────
+  -- El admin puede sacar un lote del catálogo por un tiempo (ej. mientras
+  -- se negocia por fuera, se revisa una medida o se toma foto nueva) sin
+  -- tocar Odoo. hasta = NULL → oculto hasta que el admin lo vuelva a mostrar.
+  -- Las filas vencidas se limpian solas al leer.
+  CREATE TABLE IF NOT EXISTS lotes_ocultos (
+    lote_id     TEXT PRIMARY KEY,     -- name del stock.lot en Odoo
+    hasta       TEXT,                 -- ISO; NULL = indefinido
+    oculto_por  TEXT,                 -- FK → vendedores.id
+    oculto_en   TEXT DEFAULT (datetime('now'))
+  );
+
   -- ─── Historial de compras confirmadas ─────────────────────
   CREATE TABLE IF NOT EXISTS historial_compras (
     id              TEXT PRIMARY KEY,     -- UUID

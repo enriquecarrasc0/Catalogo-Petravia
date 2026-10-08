@@ -70,6 +70,8 @@ export async function apartarLote(params: ApartarParams): Promise<ApartarResult>
     // aunque conozcan el ID directamente. Un vendedor/admin sí puede
     // apartar cualquier lote del inventario completo.
     if (!params.esVendedor && !esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo)) return { ok: false, error: 'Lote no encontrado' };
+    // Lote oculto temporalmente por el admin: para el cliente "no existe".
+    if (!params.esVendedor && lote.oculto) return { ok: false, error: 'Lote no encontrado' };
     if (lote.estado === 'vendido')  return { ok: false, error: 'Este lote ya fue vendido' };
     if (lote.estado === 'apartado') return { ok: false, error: 'Este lote ya está apartado' };
 

@@ -29,7 +29,14 @@
  *     real, deja de aparecer en el catálogo (regla que ya existía).
  *
  * CONFIGURACIÓN (variables de entorno, todas opcionales)
- *  FOTO_PENDIENTE_LOTES      Lote(s) que tienen subida la imagen genérica,
+ *  (Sin configurar nada, la detección es AUTOMÁTICA: una misma imagen
+ *   repetida en 4 o más lotes distintos se considera la genérica — las
+ *   fotos reales de láminas son únicas por lote.)
+ *  FOTO_PENDIENTE_AUTO       "0" desactiva la detección automática.
+ *  FOTO_PENDIENTE_MIN_LOTES  En cuántos lotes distintos debe repetirse una
+ *                            imagen para la detección automática (default 4).
+ *  FOTO_PENDIENTE_LOTES      (Opcional, refuerzo) Lote(s) que tienen subida
+ *                            la imagen genérica,
  *                            separados por coma. Ej: "GL-765-6".
  *                            Solo se usa para "aprender" cómo se ve la
  *                            imagen: la firma se guarda la primera vez y ya
@@ -66,6 +73,10 @@ const BYTES_FIRMA = LADO_FIRMA * LADO_FIRMA;
 
 const lotesReferencia = (process.env.FOTO_PENDIENTE_LOTES ?? '')
   .split(',').map(s => s.trim()).filter(Boolean);
+const deteccionAuto = process.env.FOTO_PENDIENTE_AUTO !== '0';
+const minLotesAuto = Math.max(2, Number(process.env.FOTO_PENDIENTE_MIN_LOTES ?? 4) || 4);
+/** Dos copias de la misma imagen (recomprimida, redimensionada) dan ~0.99. */
+const UMBRAL_DUPLICADO = 0.97;
 const umbralSimilitud = (() => {
   const n = Number(process.env.FOTO_PENDIENTE_SIMILITUD);
   return n > 0 && n <= 1 ? n : 0.92;
@@ -199,7 +210,7 @@ let escuchas: Array<() => void> = [];
 
 export const esFotoPendiente = (imageId: number) => pendientes.has(imageId);
 export const totalFotosPendientes = () => pendientes.size;
-export const deteccionConfigurada = () => lotesReferencia.length > 0;
+export const deteccionConfigurada = () => deteccionAuto || lotesReferencia.length > 0;
 
 /** lotes.service se suscribe para loguear qué lotes quedaron ocultos. */
 export function alCambiarPendientes(fn: () => void) { escuchas.push(fn); }
@@ -242,6 +253,8 @@ const stmtCapturarRef = db.prepare(`
 const stmtRefYaCapturada = db.prepare('SELECT 1 FROM fotos_pendiente_ref WHERE lote_id = ? LIMIT 1');
 
 let fotosDeLotesReferencia = new Map<string, number[]>();
+/** image_id → nombre del lote al que pertenece (lo registra lotes.service). */
+let loteDeFoto = new Map<number, string>();
 
 function capturarReferencias() {
   for (const lote of lotesReferencia) {
@@ -250,30 +263,96 @@ function capturarReferencias() {
   }
 }
 
-function recalcularPendientes() {
+/** Versión reducida 4×4 de una firma normalizada — filtro rápido antes de
+ * comparar las 1024 posiciones (hace viable comparar miles de fotos). */
+function resumen(v: Float32Array): Float32Array {
+  const r = new Float32Array(16);
+  const celda = LADO_FIRMA / 4;
+  for (let y = 0; y < LADO_FIRMA; y++)
+    for (let x = 0; x < LADO_FIRMA; x++)
+      r[Math.floor(y / celda) * 4 + Math.floor(x / celda)] += v[y * LADO_FIRMA + x];
+  let n = 0;
+  for (const x of r) n += x * x;
+  n = Math.sqrt(n) || 1;
+  for (let i = 0; i < 16; i++) r[i] /= n;
+  return r;
+}
+
+/**
+ * Detección automática: agrupa las fotos casi idénticas y marca como
+ * "pendiente" cualquier grupo que aparezca en `minLotesAuto` o más lotes
+ * DISTINTOS. Una foto real de lámina no se repite en tantos lotes; la
+ * imagen genérica sí. Agrupado voraz con pre-filtro 4×4.
+ */
+function detectarRepetidas(filas: Array<{ image_id: number; v: Float32Array }>): Set<number> {
+  const grupos: Array<{ rep: Float32Array; res: Float32Array; ids: number[]; lotes: Set<string> }> = [];
+  for (const f of filas) {
+    const lote = loteDeFoto.get(f.image_id);
+    if (!lote) continue;
+    const res = resumen(f.v);
+    let destino = null as (typeof grupos)[number] | null;
+    for (const g of grupos) {
+      let pre = 0;
+      for (let i = 0; i < 16; i++) pre += g.res[i] * res[i];
+      if (pre < 0.9) continue;
+      if (similitud(g.rep, f.v) >= UMBRAL_DUPLICADO) { destino = g; break; }
+    }
+    if (destino) { destino.ids.push(f.image_id); destino.lotes.add(lote); }
+    else grupos.push({ rep: f.v, res, ids: [f.image_id], lotes: new Set([lote]) });
+  }
+
+  const marcadas = new Set<number>();
+  const resumenLog: string[] = [];
+  for (const g of grupos) {
+    if (g.lotes.size < minLotesAuto) continue;
+    g.ids.forEach(id => marcadas.add(id));
+    const muestra = [...g.lotes].slice(0, 8).join(', ');
+    resumenLog.push(`  [fotos] Imagen repetida en ${g.lotes.size} lotes → se trata como "foto pendiente" (${muestra}${g.lotes.size > 8 ? ', ...' : ''})`);
+  }
+  // Solo se loguea cuando cambia (esto corre cada 5 min con el refresh de Odoo).
+  const texto = resumenLog.join('\n');
+  if (texto && texto !== ultimoLogAuto) console.log(texto);
+  ultimoLogAuto = texto;
+  return marcadas;
+}
+
+function recalcularPendientes(conAuto = true) {
   capturarReferencias();
 
-  let nuevo = new Set<number>();
+  // Solo fotos vigentes (de lotes que existen hoy en Odoo) y con firma válida.
+  const filas = (db.prepare('SELECT image_id, firma FROM fotos_meta').all() as Array<{ image_id: number; firma: Buffer }>)
+    .filter(f => versiones.has(f.image_id))
+    .map(f => ({ image_id: f.image_id, v: normalizar(f.firma) }))
+    .filter((f): f is { image_id: number; v: Float32Array } => f.v !== null);
+
+  const nuevo = new Set<number>();
+
+  // 1) Contra la(s) imagen(es) de referencia de FOTO_PENDIENTE_LOTES.
   if (lotesReferencia.length > 0) {
     const marcadores = lotesReferencia.map(() => '?').join(',');
     const refs = (db.prepare(`SELECT firma FROM fotos_pendiente_ref WHERE lote_id IN (${marcadores})`)
       .all(...lotesReferencia) as Array<{ firma: Buffer }>)
       .map(r => normalizar(r.firma))
       .filter((v): v is Float32Array => v !== null);
-
-    if (refs.length > 0) {
-      const filas = db.prepare('SELECT image_id, firma FROM fotos_meta').all() as Array<{ image_id: number; firma: Buffer }>;
-      for (const fila of filas) {
-        const v = normalizar(fila.firma);
-        if (v && refs.some(r => similitud(r, v) >= umbralSimilitud)) nuevo.add(fila.image_id);
-      }
+    for (const f of filas) {
+      if (refs.some(r => similitud(r, f.v) >= umbralSimilitud)) nuevo.add(f.image_id);
     }
+  }
+
+  // 2) Automática: misma imagen repetida en muchos lotes. Si no toca
+  // recalcularla en esta vuelta, se conserva lo que ya se había detectado.
+  if (deteccionAuto) {
+    const auto = conAuto ? detectarRepetidas(filas) : autoAnterior;
+    autoAnterior = auto;
+    auto.forEach(id => nuevo.add(id));
   }
 
   const cambio = nuevo.size !== pendientes.size || [...nuevo].some(id => !pendientes.has(id));
   pendientes = nuevo;
   if (cambio) escuchas.forEach(fn => { try { fn(); } catch { /* solo logs */ } });
 }
+let autoAnterior = new Set<number>();
+let ultimoLogAuto = '';
 
 // ─── Precalentado en segundo plano ────────────────────────────
 
@@ -326,7 +405,7 @@ async function precalentar() {
           console.warn(`  [fotos] No se pudo optimizar la foto ${id}:`, (err as Error).message);
         }
         hechas++;
-        if (prioritarias.has(id)) recalcularPendientes();
+        if (prioritarias.has(id)) recalcularPendientes(false);
         if (hechas % 100 === 0) console.log(`  [fotos] ${hechas}/${faltantes.length}...`);
       });
 
@@ -349,10 +428,15 @@ async function precalentar() {
  */
 export function registrarFotos(
   fotos: Array<{ id: number; version: string }>,
-  fotosPorLote: (loteId: string) => number[],
+  lotePorFoto: Map<number, string>,
 ) {
   versiones = new Map(fotos.map(f => [f.id, f.version]));
-  fotosDeLotesReferencia = new Map(lotesReferencia.map(l => [l, fotosPorLote(l)]));
+  loteDeFoto = lotePorFoto;
+
+  // Puede haber varios stock.lot con el mismo nombre (distinto producto):
+  // se juntan las fotos de todos.
+  fotosDeLotesReferencia = new Map(lotesReferencia.map(l => [l, [] as number[]]));
+  for (const [imageId, lote] of lotePorFoto) fotosDeLotesReferencia.get(lote)?.push(imageId);
 
   if (lotesReferencia.length > 0) {
     const sinFotos = lotesReferencia.filter(l => (fotosDeLotesReferencia.get(l) ?? []).length === 0

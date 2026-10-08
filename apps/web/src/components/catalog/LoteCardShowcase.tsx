@@ -4,6 +4,7 @@ import { ImageOff, Images, Check, ArrowUpRight, MapPin, Heart } from 'lucide-rea
 import type { Lote } from '@petravia/shared';
 import { formatSaldoLote, formatDimension } from '@petravia/shared';
 import EstadoBadge from './EstadoBadge';
+import OcultarLote, { textoOcultoHasta } from '@/components/admin/OcultarLote';
 import { getVendedorSession } from '@/lib/vendedorSession';
 import { useT } from '@/i18n/I18nContext';
 
@@ -50,6 +51,11 @@ interface Props {
    * de inmediato y con prioridad alta en vez de esperar al lazy-loading.
    */
   prioridad?: boolean;
+  /**
+   * SOLO ADMIN: muestra el botón para ocultar temporalmente el lote del
+   * catálogo (o volver a mostrarlo si ya está oculto).
+   */
+  adminOcultar?: boolean;
 }
 
 /**
@@ -58,7 +64,7 @@ interface Props {
  * degradado. Es la única vista del catálogo principal, y también se
  * reutiliza (con `size="compact"`) en el buscador avanzado.
  */
-export default function LoteCardShowcase({ lote, onClick, seleccionado, destacado, size = 'default', checkable, checked, onToggleCheck, favorito, onToggleFavorito, prioridad = false }: Props) {
+export default function LoteCardShowcase({ lote, onClick, seleccionado, destacado, size = 'default', checkable, checked, onToggleCheck, favorito, onToggleFavorito, prioridad = false, adminOcultar = false }: Props) {
   const t = useT();
   // La foto entra con un fundido suave cuando termina de descargar, en vez
   // de "pintarse" de arriba a abajo sobre el fondo arena.
@@ -80,7 +86,7 @@ export default function LoteCardShowcase({ lote, onClick, seleccionado, destacad
         borderRadius: '3px',
         aspectRatio: '4/3',
         background: 'var(--sand)',
-        opacity: esVendido ? 0.6 : 1,
+        opacity: esVendido ? 0.6 : lote.oculto ? 0.55 : 1,
         boxShadow: seleccionado || checked
           ? `0 0 0 ${compact ? 2 : 3}px var(--gold)`
           : destacado
@@ -177,6 +183,29 @@ export default function LoteCardShowcase({ lote, onClick, seleccionado, destacad
             style={{ filter: 'drop-shadow(0 1px 3px rgba(0,0,0,0.6))' }}
           />
         </button>
+      )}
+
+      {/* Lote oculto temporalmente (solo el admin llega a ver estos) */}
+      {lote.oculto && (
+        <div className="absolute" style={{ top: compact ? 32 : 44, left: compact ? 8 : 12 }}>
+          <span
+            className="inline-flex items-center rounded-full font-medium"
+            style={{
+              background: 'rgba(26,23,20,0.75)', color: 'white',
+              fontSize: compact ? '0.6rem' : '0.7rem', padding: compact ? '3px 8px' : '4px 10px',
+            }}
+          >
+            {textoOcultoHasta(lote.ocultoHasta)}
+          </span>
+        </div>
+      )}
+
+      {/* Botón de admin: ocultar / volver a mostrar — debajo de la fila de
+          controles de la esquina superior derecha (checkbox / contador). */}
+      {adminOcultar && (
+        <div className="absolute" style={{ top: compact ? 34 : 46, right: compact ? 8 : 12 }}>
+          <OcultarLote lote={lote} variante="tarjeta" compact={compact} />
+        </div>
       )}
 
       {/* Contador de fotos */}

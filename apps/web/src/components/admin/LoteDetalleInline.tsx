@@ -12,6 +12,7 @@ import { useLote } from '@/hooks/useLotes';
 import EstadoBadge from '@/components/catalog/EstadoBadge';
 import { formatM2, formatM3, formatSaldoLote, formatDimension, parseTituloLote, GRUPOS_MATERIALES, ACABADOS_CONOCIDOS, type Lote } from '@petravia/shared';
 import { getVendedorSession } from '@/lib/vendedorSession';
+import OcultarLote from './OcultarLote';
 
 const BASE = import.meta.env.VITE_API_URL ?? '/api';
 const HORAS_DEFAULT = 48;
@@ -165,6 +166,7 @@ export default function LoteDetalleInline({ loteId, onVolver }: Props) {
           </dl>
 
           <RenombrarMaterial lote={lote} />
+          {getVendedorSession()?.esAdmin && <OcultarLote lote={lote} variante="detalle" />}
 
           {lote.piezas.length > 0 && (
             <div className="mt-8">

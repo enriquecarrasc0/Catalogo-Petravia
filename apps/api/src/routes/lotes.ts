@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { listLotes, getLote, esUbicacionVisibleParaCliente, esLoteApartadoPorVendedor, conUbicacionAmigable, setLoteOverride } from '../services/lotes.service.js';
+import { listLotes, getLote, esUbicacionVisibleParaCliente, esLoteApartadoPorVendedor, conUbicacionAmigable, setLoteOverride, ocultarLote, mostrarLote } from '../services/lotes.service.js';
 import { apartarLote } from '../services/apartados.service.js';
 import { buscarLotes, obtenerMateriales, obtenerGrupos } from '../services/busqueda.service.js';
 import { generarZipFotosLotes, construirNombreArchivoZip } from '../services/fotosZip.service.js';
-import { authClient, authVendedor, isVendedorRequest, type AuthenticatedRequest, type VendedorRequest } from '../middleware/authClient.js';
+import { authClient, authVendedor, authAdmin, isVendedorRequest, type AuthenticatedRequest, type VendedorRequest } from '../middleware/authClient.js';
 import { validarToken } from '../services/tokens.service.js';
 import { esVendedorAdmin } from '../services/vendedorAuth.service.js';
 import type { GrupoMaterial, Acabado, EstadoLote, TipoLote } from '@petravia/shared';
@@ -39,6 +39,9 @@ lotesRouter.get('/', async (req, res, next) => {
       // completo, sin este filtro.
       soloRutasPermitidas: !esAdmin,
       vendedorIdSesion,
+      // Solo el admin ve los lotes que él mismo ocultó (marcados), para
+      // poder volver a mostrarlos.
+      incluirOcultos: esAdmin,
       page:        page     ? parseInt(page as string)     : 1,
       pageSize:    pageSize ? parseInt(pageSize as string) : 24,
     });
@@ -138,7 +141,7 @@ lotesRouter.get('/:id', async (req, res, next) => {
       // el detalle de un lote que él mismo apartó, aunque esté en una
       // ubicación que de otro modo no vería.
       const esApartadoPropio = vendedorIdSesion && esLoteApartadoPorVendedor(loteId, vendedorIdSesion);
-      if (!esApartadoPropio && (lote.estado !== 'disponible' || !esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo))) {
+      if (!esApartadoPropio && (lote.oculto || lote.estado !== 'disponible' || !esUbicacionVisibleParaCliente(lote.ubicacion, lote.tipo))) {
         res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return;
       }
     }
@@ -160,6 +163,37 @@ lotesRouter.put('/:id/renombrar', authVendedor, async (req: VendedorRequest, res
     if (!existe) { res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return; }
 
     setLoteOverride(loteId, { grupo, acabado }, req.vendedorId);
+    const lote = await getLote(loteId);
+    res.json({ ok: true, data: lote ? conUbicacionAmigable(lote) : null });
+  } catch (err) { next(err); }
+});
+
+// PUT /api/lotes/:id/ocultar — SOLO ADMIN. Oculta el lote del catálogo
+// (clientes y vendedores) por { dias } días, o indefinidamente con
+// { dias: null }, hasta que se vuelva a mostrar. No toca Odoo.
+lotesRouter.put('/:id/ocultar', authAdmin, async (req: VendedorRequest, res, next) => {
+  try {
+    const { dias } = req.body as { dias?: number | null };
+    const diasValidos = dias === null || dias === undefined
+      ? null
+      : Number.isInteger(dias) && dias >= 1 && dias <= 365 ? dias : NaN;
+    if (Number.isNaN(diasValidos)) {
+      res.status(400).json({ ok: false, error: 'dias debe ser un entero entre 1 y 365, o null' }); return;
+    }
+    const loteId = decodeURIComponent(req.params.id);
+    if (!(await getLote(loteId))) { res.status(404).json({ ok: false, error: 'Lote no encontrado' }); return; }
+
+    ocultarLote(loteId, diasValidos, req.vendedorId);
+    const lote = await getLote(loteId);
+    res.json({ ok: true, data: lote ? conUbicacionAmigable(lote) : null });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/lotes/:id/ocultar — SOLO ADMIN. Vuelve a mostrar el lote.
+lotesRouter.delete('/:id/ocultar', authAdmin, async (req: VendedorRequest, res, next) => {
+  try {
+    const loteId = decodeURIComponent(req.params.id);
+    mostrarLote(loteId);
     const lote = await getLote(loteId);
     res.json({ ok: true, data: lote ? conUbicacionAmigable(lote) : null });
   } catch (err) { next(err); }

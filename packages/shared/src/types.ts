@@ -90,6 +90,8 @@ export interface Lote {
   actualizadoEn?: string;
   ubicacion?: string;    // ubicación de inventario en Odoo (ej. "TMM1/Formato") — solo visible para vendedor/admin
   renombrado?: boolean;  // true si grupo/acabado fueron sobreescritos manualmente desde el panel (overlay local)
+  oculto?: boolean;      // true si el admin lo ocultó temporalmente del catálogo (overlay local)
+  ocultoHasta?: string | null; // ISO — hasta cuándo; null = hasta que el admin lo vuelva a mostrar
 }
 
 // ─── FILTROS (para la vista del catálogo) ───────────────────
