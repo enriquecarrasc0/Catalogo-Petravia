@@ -37,10 +37,14 @@ import { fileURLToPath } from 'url';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 dotenv.config({ path: path.join(__dirname, '..', '.env') });
 
-const ODOO_URL  = process.env.ODOO_URL  ?? 'https://petravia-test.odoo.com';
+const ODOO_URL  = process.env.ODOO_URL  ?? '';
 const ODOO_DB   = process.env.ODOO_DB   ?? '';
-const ODOO_USER = process.env.ODOO_USER ?? 'enrique@petravia.mx';
+const ODOO_USER = process.env.ODOO_USER ?? '';
 const ODOO_KEY  = process.env.ODOO_KEY  ?? '';
+if (!ODOO_URL || !ODOO_DB || !ODOO_USER || !ODOO_KEY) {
+  console.error('Faltan ODOO_URL / ODOO_DB / ODOO_USER / ODOO_KEY en apps/api/.env');
+  process.exit(1);
+}
 
 // ─── Mismas reglas que apps/api/src/services/lotes.service.ts ──────
 

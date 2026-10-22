@@ -1,13 +1,12 @@
 /**
  * apps/api/src/index.ts
  */
-import dotenv from 'dotenv';
+// ── Cargar y validar variables de entorno ANTES que cualquier otro módulo ──
+// (tiene que ser el primer import: ver el porqué en env.ts)
+import './env.js';
+
 import express from 'express';
 import cors from 'cors';
-
-// ── Cargar .env (URL object — funciona en Windows y Linux sin .pathname) ──
-dotenv.config({ path: new URL('../.env', import.meta.url) });
-console.log('[ENV]', process.env.ODOO_KEY?.slice(0,6), process.env.SMTP_HOST);
 
 // ── Migración automática al arrancar ─────────────────────────
 // Crea las tablas si no existen. Idempotente (IF NOT EXISTS).

@@ -11,11 +11,17 @@ no hace falta correrlo en el servidor mismo).
 Requisitos:
     pip install firebird-driver
 
+Configuracion (variables de entorno, NUNCA en el codigo):
+    FB_HOST, FB_PATH, FB_USER, FB_PASSWORD   (obligatorias)
+    FB_PORT (default 3050), FB_CHARSET (default WIN1252)
+    Ejemplo PowerShell:  $env:FB_PASSWORD = "..."
+
 Salida:
     microsip_contabilidad_datos.json
 """
 
 import json
+import os
 import sys
 from datetime import date, datetime
 from decimal import Decimal
@@ -26,12 +32,20 @@ from firebird.driver import connect as fb_connect, DatabaseError
 # CONFIGURACION
 # --------------------------------------------------------------------------
 
-FB_HOST = "192.168.11.250"
-FB_PORT = 3050
-FB_PATH = r"C:\Microsip datos\TERRAMAR CONTABILIDAD.fdb"
-FB_USER = "SYSDBA"
-FB_PASSWORD = "masterkey"
-FB_CHARSET = "WIN1252"
+def _env(nombre, default=None):
+    valor = os.environ.get(nombre, default)
+    if not valor:
+        print(f"[ERROR] Falta la variable de entorno {nombre}")
+        sys.exit(1)
+    return valor
+
+
+FB_HOST = _env("FB_HOST")
+FB_PORT = int(_env("FB_PORT", "3050"))
+FB_PATH = _env("FB_PATH")
+FB_USER = _env("FB_USER")
+FB_PASSWORD = _env("FB_PASSWORD")
+FB_CHARSET = _env("FB_CHARSET", "WIN1252")
 
 FECHA_CORTE = None                 
 INCLUIR_POLIZAS_CANCELADAS = False

@@ -207,9 +207,19 @@ function sembrarVendedorInicial() {
   const totalVendedores = (db.prepare('SELECT COUNT(*) as c FROM vendedores').get() as any).c;
   if (totalVendedores > 0) return;
 
-  const usuario  = process.env.ADMIN_USER ?? 'admin';
-  const password = process.env.ADMIN_PASS ?? 'petravia123';
+  const usuario  = process.env.ADMIN_USER?.trim();
+  const password = process.env.ADMIN_PASS;
   const email    = process.env.ADMIN_EMAIL;
+
+  // Sin valores por defecto: una contraseña escrita en el código queda
+  // pública en el repositorio.
+  if (!usuario || !password) {
+    console.warn(
+      '⚠️  No hay vendedores y faltan ADMIN_USER / ADMIN_PASS: no se creó el ' +
+      'vendedor inicial. Defínelas en el entorno y reinicia el servidor.'
+    );
+    return;
+  }
 
   const id = randomUUID();
   db.prepare(`

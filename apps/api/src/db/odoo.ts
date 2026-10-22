@@ -5,11 +5,13 @@
  * Toda comunicación con Odoo pasa por aquí.
  */
 import xmlrpc from 'xmlrpc';
+import { requireEnv } from '../env.js';
 
-const ODOO_URL  = process.env.ODOO_URL  ?? 'https://petraviash.odoo.com';
-const ODOO_DB   = process.env.ODOO_DB   ?? 'rvargasnovu-petravia-prod-24989563';
-const ODOO_USER = process.env.ODOO_USER ?? 'enrique@petravia.mx';
-const ODOO_KEY  = process.env.ODOO_KEY  ?? '8418f4516fdde2de5b672c57ca16a38d37e28d4a';
+// Las credenciales vienen SOLO del entorno (apps/api/.env o Railway → Variables).
+const ODOO_URL  = requireEnv('ODOO_URL');
+const ODOO_DB   = requireEnv('ODOO_DB');
+const ODOO_USER = requireEnv('ODOO_USER');
+const ODOO_KEY  = requireEnv('ODOO_KEY');
 
 /** Cuánto esperamos, como máximo, una respuesta de Odoo antes de dar por
  * perdida esa llamada — ver el porqué en `call()` más abajo. */

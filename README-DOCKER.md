@@ -185,14 +185,14 @@ PORT=3000
 CORS_ORIGIN=http://localhost:5173
 
 # Odoo
-ODOO_URL=https://petravia-test.odoo.com
-ODOO_DB=petraviash-stg-32818560
-ODOO_USER=enrique@petravia.mx
-ODOO_KEY=tu_api_key_aqui
+ODOO_URL=https://tu-instancia.odoo.com
+ODOO_DB=tu-base-de-datos
+ODOO_USER=tu-correo@tuempresa.com
+ODOO_KEY=tu-api-key-de-odoo
 
 # Admin del catálogo
-ADMIN_USER=admin
-ADMIN_PASS=petravia123
+ADMIN_USER=tu-usuario-admin
+ADMIN_PASS=tu-contraseña-segura
 ```
 
 ### Arrancar en desarrollo

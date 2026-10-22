@@ -7,3 +7,14 @@ dist/
 .env.local
 apps/web/.env
 apps/api/.env
+
+# Cualquier variante de .env (se versionan solo los *.example)
+.env.*
+!.env.example
+!.env.docker.example
+**/.env
+
+# Volcados y datos de Microsip (contabilidad / esquema): no van al repo
+MARMOL.sql
+*.fdb
+microsip_contabilidad_datos.json

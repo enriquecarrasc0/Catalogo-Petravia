@@ -3,6 +3,7 @@
  * ─────────────────────────
  * Capa de base de datos con SQLite (better-sqlite3).
  */
+import '../env.js';
 import Database from 'better-sqlite3';
 import path from 'path';
 import { fileURLToPath } from 'url';
